@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useStudents, useAttendanceRecords, generateAttendanceId, Student, getTodayDate } from '@/lib/attendance-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calendar, CheckCircle2, XCircle, Clock, Search, Save, Loader2 } from 'lucide-react';
+import { Calendar, CheckCircle2, XCircle, Clock, Search, Save, Loader2, Users } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -50,6 +51,18 @@ const AttendancePage = () => {
         item.studentId === studentId ? { ...item, status } : item
       )
     );
+  };
+  
+  // Mark all students as present
+  const markAllPresent = () => {
+    setAttendance(prev => 
+      prev.map(item => ({ ...item, status: 'present' }))
+    );
+    
+    toast({
+      title: "All students marked present",
+      description: `All ${students.length} students have been marked as present`,
+    });
   };
   
   // Save attendance record
@@ -188,14 +201,25 @@ const AttendancePage = () => {
             <CardHeader>
               <CardTitle>Student Attendance</CardTitle>
               <CardDescription>Mark attendance status for each student</CardDescription>
-              <div className="relative mt-4">
-                <Input
-                  placeholder="Search by name or roll number..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+              <div className="flex items-center justify-between gap-2 mt-4">
+                <div className="relative flex-1">
+                  <Input
+                    placeholder="Search by name or roll number..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={markAllPresent}
+                  className="whitespace-nowrap"
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  Mark All Present
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="p-0">
