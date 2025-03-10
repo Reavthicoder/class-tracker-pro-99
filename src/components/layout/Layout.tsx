@@ -41,7 +41,35 @@ export const Layout = ({ children }: LayoutProps) => {
         </main>
       </div>
       <footer className="py-3 px-4 text-center text-sm text-muted-foreground border-t">
-        <p>Developed by Sahasra</p>
+        <p>
+          Developed by{' '}
+          <a 
+            href="http://linkedin.com/in/sahasra-varadati-396b35296" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Sahasra
+          </a>
+          {', '}
+          <a 
+            href="#" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Ayushi
+          </a>
+          {' & '}
+          <a 
+            href="#" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Meghana Madasu
+          </a>
+        </p>
       </footer>
     </div>
   );
