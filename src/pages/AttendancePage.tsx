@@ -107,14 +107,14 @@ const AttendancePage = () => {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
-        <section className="mb-8" data-aos="fade-up">
+        <section className="mb-8">
           <h1 className="text-3xl font-bold">Take Attendance</h1>
           <p className="text-muted-foreground mt-2">Record attendance for today's class session</p>
         </section>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Session Info */}
-          <Card className="col-span-1" data-aos="fade-up">
+          <Card className="col-span-1">
             <CardHeader>
               <CardTitle>Session Details</CardTitle>
               <CardDescription>Configure class session info</CardDescription>
@@ -184,7 +184,7 @@ const AttendancePage = () => {
           </Card>
           
           {/* Student List */}
-          <Card className="col-span-1 lg:col-span-2" data-aos="fade-up" data-aos-delay="100">
+          <Card className="col-span-1 lg:col-span-2">
             <CardHeader>
               <CardTitle>Student Attendance</CardTitle>
               <CardDescription>Mark attendance status for each student</CardDescription>
@@ -217,8 +217,6 @@ const AttendancePage = () => {
                       <div 
                         key={student.id} 
                         className="flex items-center justify-between p-4 hover:bg-muted/20 transition-colors"
-                        data-aos="fade-up"
-                        data-aos-delay={50 * (student.id % 10)}
                       >
                         <div className="flex items-center gap-4">
                           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -279,3 +277,4 @@ const AttendancePage = () => {
 };
 
 export default AttendancePage;
+

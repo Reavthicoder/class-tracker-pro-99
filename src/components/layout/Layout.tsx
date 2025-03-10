@@ -31,13 +31,18 @@ export const Layout = ({ children }: LayoutProps) => {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-      <main className="flex-1 transition-all duration-300 ease-in-out">
-        <div className="container px-4 py-8 mx-auto max-w-7xl">
-          {children}
-        </div>
-      </main>
+    <div className="flex min-h-screen bg-background flex-col">
+      <div className="flex flex-1">
+        <Sidebar />
+        <main className="flex-1 transition-all duration-300 ease-in-out">
+          <div className="container px-4 py-8 mx-auto max-w-7xl">
+            {children}
+          </div>
+        </main>
+      </div>
+      <footer className="py-3 px-4 text-center text-sm text-muted-foreground border-t">
+        <p>Developed by Sahasra</p>
+      </footer>
     </div>
   );
 };
