@@ -3,53 +3,53 @@ import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Database, Server, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { DB_CONNECTION_STATUS } from '@/lib/constants';
+import { initializeDatabase } from '@/lib/database-service';
 
 const DatabaseStatus = () => {
-  const [status, setStatus] = useState<'checking' | 'browser' | 'connected' | 'disconnected'>('checking');
+  const [status, setStatus] = useState<typeof DB_CONNECTION_STATUS[keyof typeof DB_CONNECTION_STATUS]>(DB_CONNECTION_STATUS.CHECKING);
   
   useEffect(() => {
     const checkStatus = async () => {
-      // In a browser environment, we can't use MySQL directly
-      if (typeof window !== 'undefined') {
-        setStatus('browser');
-      } else {
-        // This code would only run in a Node.js environment
-        try {
-          // In a real Node.js environment, we would check database connectivity
-          setStatus('connected');
-        } catch (error) {
-          console.error('Database connection failed:', error);
-          setStatus('disconnected');
+      try {
+        // In a browser environment, we can't use MySQL directly
+        if (typeof window !== 'undefined') {
+          setStatus(DB_CONNECTION_STATUS.BROWSER);
+          return;
         }
+        
+        // Try to initialize database connection
+        const isConnected = await initializeDatabase();
+        setStatus(isConnected ? DB_CONNECTION_STATUS.CONNECTED : DB_CONNECTION_STATUS.DISCONNECTED);
+      } catch (error) {
+        console.error('Database connection check failed:', error);
+        setStatus(DB_CONNECTION_STATUS.DISCONNECTED);
       }
     };
     
     checkStatus();
   }, []);
   
-  if (status === 'checking') {
-    return (
-      <Badge variant="outline" className="gap-1">
-        <Loader2 className="h-3 w-3 animate-spin" />
-        <span>Checking DB...</span>
-      </Badge>
-    );
-  }
-  
   const statusInfo = {
-    browser: {
+    [DB_CONNECTION_STATUS.CHECKING]: {
+      icon: <Loader2 className="h-3 w-3 animate-spin" />,
+      text: 'Checking DB...',
+      tooltip: 'Checking database connection status...',
+      variant: 'outline' as const
+    },
+    [DB_CONNECTION_STATUS.BROWSER]: {
       icon: <Database className="h-3 w-3" />,
       text: 'Using Browser Storage',
       tooltip: 'Running in browser environment. Using localStorage for data storage.',
       variant: 'default' as const
     },
-    connected: {
+    [DB_CONNECTION_STATUS.CONNECTED]: {
       icon: <Server className="h-3 w-3" />,
       text: 'Database Connected',
       tooltip: 'Successfully connected to MySQL database.',
-      variant: 'default' as const
+      variant: 'success' as const
     },
-    disconnected: {
+    [DB_CONNECTION_STATUS.DISCONNECTED]: {
       icon: <Server className="h-3 w-3" />,
       text: 'Database Disconnected',
       tooltip: 'Failed to connect to MySQL database. Using localStorage as fallback.',

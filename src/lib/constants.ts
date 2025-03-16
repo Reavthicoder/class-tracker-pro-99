@@ -3,10 +3,14 @@
  * Database configuration constants
  */
 export const DB_CONFIG = {
-  host: 'localhost',
-  user: 'root',
-  password: 'password',
-  database: 'attentrack'
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || 'password',
+  database: process.env.DB_DATABASE || 'attentrack',
+  // Additional configuration options
+  connectionLimit: 10,
+  waitForConnections: true,
+  queueLimit: 0
 };
 
 /**
@@ -58,3 +62,14 @@ CREATE TABLE IF NOT EXISTS student_attendance (
   FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
 );`
 };
+
+/**
+ * Database connection status
+ */
+export const DB_CONNECTION_STATUS = {
+  CHECKING: 'checking',
+  BROWSER: 'browser',
+  CONNECTED: 'connected',
+  DISCONNECTED: 'disconnected'
+} as const;
+
