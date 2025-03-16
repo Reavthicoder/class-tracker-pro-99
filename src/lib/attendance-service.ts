@@ -1,5 +1,5 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import * as db from './database-service';
 
 // Types
 export interface Student {
@@ -102,84 +102,187 @@ const generateInitialAttendanceRecords = (): AttendanceRecord[] => {
   return records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 };
 
-// Local storage keys
-const STORAGE_KEYS = {
-  STUDENTS: 'attentrack-students',
-  ATTENDANCE: 'attentrack-attendance'
+// Initialize database
+let dbInitialized = false;
+const initDb = async () => {
+  if (!dbInitialized) {
+    try {
+      const success = await db.initializeDatabase();
+      
+      if (success) {
+        // Check if we have students in the database
+        const students = await db.getStudents();
+        
+        if (students.length === 0) {
+          // Seed the database with initial data
+          console.log('Seeding database with initial students...');
+          for (const student of initialStudents) {
+            await db.addStudent({ name: student.name, rollNumber: student.rollNumber });
+          }
+          
+          // Seed with initial attendance records
+          console.log('Seeding database with initial attendance records...');
+          const records = generateInitialAttendanceRecords();
+          for (const record of records) {
+            await db.saveAttendanceRecord(record);
+          }
+        }
+        
+        dbInitialized = true;
+      }
+    } catch (error) {
+      console.error('Failed to initialize database:', error);
+    }
+  }
 };
+
+// Call initDb when the file is imported
+initDb();
 
 // Hooks for accessing data
 export const useStudents = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   
-  useEffect(() => {
-    // Try to load from localStorage first
-    const storedStudents = localStorage.getItem(STORAGE_KEYS.STUDENTS);
-    
-    if (storedStudents) {
-      setStudents(JSON.parse(storedStudents));
-    } else {
-      // Use initial sample data if nothing in localStorage
+  const fetchStudents = useCallback(async () => {
+    try {
+      setLoading(true);
+      await initDb(); // Ensure DB is initialized
+      const data = await db.getStudents();
+      setStudents(data);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      // Fallback to sample data if DB fails
       setStudents(initialStudents);
-      localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(initialStudents));
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   }, []);
   
-  return { students, loading };
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+  
+  const addStudent = async (student: Omit<Student, 'id'>): Promise<Student> => {
+    try {
+      const newStudent = await db.addStudent(student);
+      await fetchStudents(); // Refresh list
+      return newStudent;
+    } catch (error) {
+      console.error('Error adding student:', error);
+      throw error;
+    }
+  };
+  
+  const updateStudent = async (student: Student): Promise<Student> => {
+    try {
+      const updatedStudent = await db.updateStudent(student);
+      await fetchStudents(); // Refresh list
+      return updatedStudent;
+    } catch (error) {
+      console.error('Error updating student:', error);
+      throw error;
+    }
+  };
+  
+  const deleteStudent = async (id: number): Promise<boolean> => {
+    try {
+      await db.deleteStudent(id);
+      await fetchStudents(); // Refresh list
+      return true;
+    } catch (error) {
+      console.error('Error deleting student:', error);
+      throw error;
+    }
+  };
+  
+  return { 
+    students, 
+    loading, 
+    addStudent,
+    updateStudent,
+    deleteStudent,
+    refreshStudents: fetchStudents
+  };
 };
 
 export const useAttendanceRecords = () => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // Load records
-  useEffect(() => {
-    const storedRecords = localStorage.getItem(STORAGE_KEYS.ATTENDANCE);
-    
-    if (storedRecords) {
-      setRecords(JSON.parse(storedRecords));
-    } else {
-      // Use initial sample data
-      const initialRecords = generateInitialAttendanceRecords();
-      setRecords(initialRecords);
-      localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(initialRecords));
+  const fetchRecords = useCallback(async () => {
+    try {
+      setLoading(true);
+      await initDb(); // Ensure DB is initialized
+      const data = await db.getAttendanceRecords();
+      setRecords(data);
+    } catch (error) {
+      console.error('Error fetching attendance records:', error);
+      // Fallback to localStorage if DB fails
+      const storedRecords = localStorage.getItem('attentrack-attendance');
+      if (storedRecords) {
+        setRecords(JSON.parse(storedRecords));
+      } else {
+        const initialRecords = generateInitialAttendanceRecords();
+        setRecords(initialRecords);
+      }
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   }, []);
   
+  // Load records
+  useEffect(() => {
+    fetchRecords();
+  }, [fetchRecords]);
+  
   // Save records function
-  const saveAttendanceRecord = (record: AttendanceRecord) => {
-    // Check if record with this ID already exists
-    const existingIndex = records.findIndex(r => r.id === record.id);
-    
-    let newRecords: AttendanceRecord[];
-    
-    if (existingIndex >= 0) {
-      // Update existing record
-      newRecords = [...records];
-      newRecords[existingIndex] = record;
-    } else {
-      // Add new record
-      newRecords = [record, ...records];
+  const saveAttendanceRecord = async (record: AttendanceRecord) => {
+    try {
+      await db.saveAttendanceRecord(record);
+      await fetchRecords(); // Refresh records
+      return record;
+    } catch (error) {
+      console.error('Error saving attendance record:', error);
+      
+      // Fallback to localStorage if DB fails
+      const existingIndex = records.findIndex(r => r.id === record.id);
+      
+      let newRecords: AttendanceRecord[];
+      
+      if (existingIndex >= 0) {
+        newRecords = [...records];
+        newRecords[existingIndex] = record;
+      } else {
+        newRecords = [record, ...records];
+      }
+      
+      newRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setRecords(newRecords);
+      localStorage.setItem('attentrack-attendance', JSON.stringify(newRecords));
+      
+      return record;
     }
-    
-    // Sort records by date (newest first)
-    newRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
-    // Update state
-    setRecords(newRecords);
-    
-    // Save to localStorage
-    localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(newRecords));
-    
-    return record;
   };
   
-  return { records, loading, saveAttendanceRecord };
+  const deleteAttendanceRecord = async (id: string): Promise<boolean> => {
+    try {
+      await db.deleteAttendanceRecord(id);
+      await fetchRecords(); // Refresh records
+      return true;
+    } catch (error) {
+      console.error('Error deleting attendance record:', error);
+      throw error;
+    }
+  };
+  
+  return { 
+    records, 
+    loading, 
+    saveAttendanceRecord,
+    deleteAttendanceRecord,
+    refreshRecords: fetchRecords
+  };
 };
 
 // Get today's date in YYYY-MM-DD format
