@@ -9,13 +9,13 @@ const DatabaseStatus = () => {
   
   useEffect(() => {
     const checkStatus = async () => {
-      // Always browser in preview
+      // In a browser environment, we can't use MySQL directly
       if (typeof window !== 'undefined') {
         setStatus('browser');
       } else {
+        // This code would only run in a Node.js environment
         try {
           // In a real Node.js environment, we would check database connectivity
-          // But this will never run in the preview
           setStatus('connected');
         } catch (error) {
           console.error('Database connection failed:', error);

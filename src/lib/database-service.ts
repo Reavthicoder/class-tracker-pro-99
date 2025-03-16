@@ -1,20 +1,19 @@
-
-import mysql from 'mysql2/promise';
 import { Student, AttendanceRecord } from './attendance-service';
+import { DB_CONFIG, STORAGE_KEYS } from './constants';
 
 // Check if we're running in a browser environment
 const isBrowser = typeof window !== 'undefined';
 
-// Database connection configuration - use environment variables if available
+// Database connection configuration
 const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'password',
-  database: process.env.DB_NAME || 'attentrack'
+  host: DB_CONFIG.host,
+  user: DB_CONFIG.user,
+  password: DB_CONFIG.password,
+  database: DB_CONFIG.database
 };
 
 // Create a connection pool
-let pool: mysql.Pool | null = null;
+let pool: any = null;
 let isInitialized = false;
 
 /**
@@ -30,6 +29,8 @@ export const initializeDatabase = async () => {
   }
   
   try {
+    // Only import mysql2 in a node environment
+    const mysql = await import('mysql2/promise');
     pool = mysql.createPool(dbConfig);
     console.log('Database connection pool initialized');
     
@@ -131,7 +132,7 @@ export const getStudents = async (): Promise<Student[]> => {
   
   if (isBrowser) {
     // In browser, get from localStorage
-    return getLocalStorageItem('attentrack-students', []);
+    return getLocalStorageItem(STORAGE_KEYS.STUDENTS, []);
   }
   
   try {
@@ -142,7 +143,7 @@ export const getStudents = async (): Promise<Student[]> => {
   } catch (error) {
     console.error('Error fetching students:', error);
     // Fallback to localStorage even in server environment if DB fails
-    return getLocalStorageItem('attentrack-students', []);
+    return getLocalStorageItem(STORAGE_KEYS.STUDENTS, []);
   }
 };
 
@@ -159,7 +160,7 @@ export const addStudent = async (student: Omit<Student, 'id'>): Promise<Student>
     const newStudent = { ...student, id: newId };
     
     const updatedStudents = [...students, newStudent];
-    setLocalStorageItem('attentrack-students', updatedStudents);
+    setLocalStorageItem(STORAGE_KEYS.STUDENTS, updatedStudents);
     
     return newStudent;
   }
@@ -172,7 +173,7 @@ export const addStudent = async (student: Omit<Student, 'id'>): Promise<Student>
     );
     conn.release();
     
-    const insertId = (result as mysql.ResultSetHeader).insertId;
+    const insertId = (result as any).insertId;
     return { ...student, id: insertId };
   } catch (error) {
     console.error('Error adding student:', error);
@@ -183,7 +184,7 @@ export const addStudent = async (student: Omit<Student, 'id'>): Promise<Student>
     const newStudent = { ...student, id: newId };
     
     const updatedStudents = [...students, newStudent];
-    setLocalStorageItem('attentrack-students', updatedStudents);
+    setLocalStorageItem(STORAGE_KEYS.STUDENTS, updatedStudents);
     
     return newStudent;
   }
@@ -202,7 +203,7 @@ export const updateStudent = async (student: Student): Promise<Student> => {
       s.id === student.id ? student : s
     );
     
-    setLocalStorageItem('attentrack-students', updatedStudents);
+    setLocalStorageItem(STORAGE_KEYS.STUDENTS, updatedStudents);
     return student;
   }
   
@@ -223,7 +224,7 @@ export const updateStudent = async (student: Student): Promise<Student> => {
       s.id === student.id ? student : s
     );
     
-    setLocalStorageItem('attentrack-students', updatedStudents);
+    setLocalStorageItem(STORAGE_KEYS.STUDENTS, updatedStudents);
     return student;
   }
 };
@@ -239,7 +240,7 @@ export const deleteStudent = async (id: number): Promise<boolean> => {
     const students = await getStudents();
     const updatedStudents = students.filter(s => s.id !== id);
     
-    setLocalStorageItem('attentrack-students', updatedStudents);
+    setLocalStorageItem(STORAGE_KEYS.STUDENTS, updatedStudents);
     return true;
   }
   
@@ -255,7 +256,7 @@ export const deleteStudent = async (id: number): Promise<boolean> => {
     const students = await getStudents();
     const updatedStudents = students.filter(s => s.id !== id);
     
-    setLocalStorageItem('attentrack-students', updatedStudents);
+    setLocalStorageItem(STORAGE_KEYS.STUDENTS, updatedStudents);
     return true;
   }
 };
@@ -283,7 +284,7 @@ export const saveAttendanceRecord = async (record: AttendanceRecord): Promise<At
     }
     
     updatedRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setLocalStorageItem('attentrack-attendance', updatedRecords);
+    setLocalStorageItem(STORAGE_KEYS.ATTENDANCE, updatedRecords);
     
     return record;
   }
@@ -332,7 +333,7 @@ export const saveAttendanceRecord = async (record: AttendanceRecord): Promise<At
     }
     
     updatedRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setLocalStorageItem('attentrack-attendance', updatedRecords);
+    setLocalStorageItem(STORAGE_KEYS.ATTENDANCE, updatedRecords);
     
     return record;
   }
@@ -346,7 +347,7 @@ export const getAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
   
   if (isBrowser) {
     // In browser, get from localStorage
-    return getLocalStorageItem('attentrack-attendance', []);
+    return getLocalStorageItem(STORAGE_KEYS.ATTENDANCE, []);
   }
   
   try {
@@ -381,7 +382,7 @@ export const getAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
   } catch (error) {
     console.error('Error fetching attendance records:', error);
     // Fallback to localStorage
-    return getLocalStorageItem('attentrack-attendance', []);
+    return getLocalStorageItem(STORAGE_KEYS.ATTENDANCE, []);
   }
 };
 
@@ -396,7 +397,7 @@ export const deleteAttendanceRecord = async (id: string): Promise<boolean> => {
     const records = await getAttendanceRecords();
     const updatedRecords = records.filter(r => r.id !== id);
     
-    setLocalStorageItem('attentrack-attendance', updatedRecords);
+    setLocalStorageItem(STORAGE_KEYS.ATTENDANCE, updatedRecords);
     return true;
   }
   
@@ -412,7 +413,7 @@ export const deleteAttendanceRecord = async (id: string): Promise<boolean> => {
     const records = await getAttendanceRecords();
     const updatedRecords = records.filter(r => r.id !== id);
     
-    setLocalStorageItem('attentrack-attendance', updatedRecords);
+    setLocalStorageItem(STORAGE_KEYS.ATTENDANCE, updatedRecords);
     return true;
   }
 };
