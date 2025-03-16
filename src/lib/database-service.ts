@@ -2,6 +2,9 @@
 import mysql from 'mysql2/promise';
 import { Student, AttendanceRecord } from './attendance-service';
 
+// Check if we're running in a browser environment
+const isBrowser = typeof window !== 'undefined';
+
 // Database connection configuration
 const dbConfig = {
   host: 'localhost',
@@ -17,6 +20,11 @@ let pool: mysql.Pool | null = null;
  * Initialize the database connection pool
  */
 export const initializeDatabase = async () => {
+  if (isBrowser) {
+    console.log('Running in browser environment, using localStorage fallback');
+    return false;
+  }
+  
   try {
     pool = mysql.createPool(dbConfig);
     console.log('Database connection pool initialized');
@@ -40,6 +48,7 @@ export const initializeDatabase = async () => {
  * Create necessary tables if they don't exist
  */
 const createTables = async () => {
+  if (isBrowser) return; // Skip in browser
   if (!pool) throw new Error('Database not initialized');
   
   try {
@@ -85,6 +94,8 @@ const createTables = async () => {
  * Get a database connection from the pool
  */
 const getConnection = async () => {
+  if (isBrowser) throw new Error('Cannot get database connection in browser');
+  
   if (!pool) {
     await initializeDatabase();
   }
@@ -98,6 +109,12 @@ const getConnection = async () => {
  * Get all students from the database
  */
 export const getStudents = async (): Promise<Student[]> => {
+  if (isBrowser) {
+    // In browser, get from localStorage
+    const storedStudents = localStorage.getItem('attentrack-students');
+    return storedStudents ? JSON.parse(storedStudents) : [];
+  }
+  
   try {
     const conn = await getConnection();
     const [rows] = await conn.execute('SELECT * FROM students ORDER BY name');
@@ -113,6 +130,18 @@ export const getStudents = async (): Promise<Student[]> => {
  * Add a new student to the database
  */
 export const addStudent = async (student: Omit<Student, 'id'>): Promise<Student> => {
+  if (isBrowser) {
+    // In browser, save to localStorage
+    const students = await getStudents();
+    const newId = students.length > 0 ? Math.max(...students.map(s => s.id)) + 1 : 1;
+    const newStudent = { ...student, id: newId };
+    
+    const updatedStudents = [...students, newStudent];
+    localStorage.setItem('attentrack-students', JSON.stringify(updatedStudents));
+    
+    return newStudent;
+  }
+  
   try {
     const conn = await getConnection();
     const [result] = await conn.execute(
@@ -133,6 +162,17 @@ export const addStudent = async (student: Omit<Student, 'id'>): Promise<Student>
  * Update an existing student
  */
 export const updateStudent = async (student: Student): Promise<Student> => {
+  if (isBrowser) {
+    // In browser, update in localStorage
+    const students = await getStudents();
+    const updatedStudents = students.map(s => 
+      s.id === student.id ? student : s
+    );
+    
+    localStorage.setItem('attentrack-students', JSON.stringify(updatedStudents));
+    return student;
+  }
+  
   try {
     const conn = await getConnection();
     await conn.execute(
@@ -151,6 +191,15 @@ export const updateStudent = async (student: Student): Promise<Student> => {
  * Delete a student by ID
  */
 export const deleteStudent = async (id: number): Promise<boolean> => {
+  if (isBrowser) {
+    // In browser, delete from localStorage
+    const students = await getStudents();
+    const updatedStudents = students.filter(s => s.id !== id);
+    
+    localStorage.setItem('attentrack-students', JSON.stringify(updatedStudents));
+    return true;
+  }
+  
   try {
     const conn = await getConnection();
     await conn.execute('DELETE FROM students WHERE id = ?', [id]);
@@ -168,6 +217,26 @@ export const deleteStudent = async (id: number): Promise<boolean> => {
  * Save an attendance record
  */
 export const saveAttendanceRecord = async (record: AttendanceRecord): Promise<AttendanceRecord> => {
+  if (isBrowser) {
+    // In browser, save to localStorage
+    const records = await getAttendanceRecords();
+    const existingIndex = records.findIndex(r => r.id === record.id);
+    
+    let updatedRecords: AttendanceRecord[];
+    
+    if (existingIndex >= 0) {
+      updatedRecords = [...records];
+      updatedRecords[existingIndex] = record;
+    } else {
+      updatedRecords = [record, ...records];
+    }
+    
+    updatedRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    localStorage.setItem('attentrack-attendance', JSON.stringify(updatedRecords));
+    
+    return record;
+  }
+  
   const conn = await getConnection();
   
   try {
@@ -208,6 +277,12 @@ export const saveAttendanceRecord = async (record: AttendanceRecord): Promise<At
  * Get all attendance records
  */
 export const getAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
+  if (isBrowser) {
+    // In browser, get from localStorage
+    const storedRecords = localStorage.getItem('attentrack-attendance');
+    return storedRecords ? JSON.parse(storedRecords) : [];
+  }
+  
   try {
     const conn = await getConnection();
     
@@ -247,6 +322,15 @@ export const getAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
  * Delete an attendance record
  */
 export const deleteAttendanceRecord = async (id: string): Promise<boolean> => {
+  if (isBrowser) {
+    // In browser, delete from localStorage
+    const records = await getAttendanceRecords();
+    const updatedRecords = records.filter(r => r.id !== id);
+    
+    localStorage.setItem('attentrack-attendance', JSON.stringify(updatedRecords));
+    return true;
+  }
+  
   try {
     const conn = await getConnection();
     await conn.execute('DELETE FROM attendance_records WHERE id = ?', [id]);
@@ -257,3 +341,4 @@ export const deleteAttendanceRecord = async (id: string): Promise<boolean> => {
     throw error;
   }
 };
+
