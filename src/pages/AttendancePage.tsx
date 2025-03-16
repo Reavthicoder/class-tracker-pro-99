@@ -5,15 +5,17 @@ import { useStudents, useAttendanceRecords, generateAttendanceId, Student, getTo
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calendar, CheckCircle2, XCircle, Clock, Search, Save, Loader2, Users } from 'lucide-react';
+import { Calendar, CheckCircle2, XCircle, Clock, Search, Save, Loader2, Users, AlertCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import DatabaseStatus from '@/components/DatabaseStatus';
 
 const AttendancePage = () => {
-  const { students, loading: loadingStudents } = useStudents();
-  const { records, saveAttendanceRecord } = useAttendanceRecords();
+  const { students, loading: loadingStudents, error: studentsError } = useStudents();
+  const { records, saveAttendanceRecord, error: recordsError } = useAttendanceRecords();
   const { toast } = useToast();
   
   // Form state
@@ -87,7 +89,7 @@ const AttendancePage = () => {
       };
       
       // Save to service
-      saveAttendanceRecord(newRecord);
+      await saveAttendanceRecord(newRecord);
       
       // Show success message
       toast({
@@ -99,9 +101,10 @@ const AttendancePage = () => {
       setClassTitle('');
       // Keep the attendance status as is for the next session
     } catch (error) {
+      console.error('Error saving attendance:', error);
       toast({
         title: "Error saving attendance",
-        description: "There was a problem saving this attendance record",
+        description: "There was a problem saving this attendance record. Using local storage as fallback.",
         variant: "destructive"
       });
     } finally {
@@ -117,13 +120,31 @@ const AttendancePage = () => {
     total: attendance.length
   };
 
+  const error = studentsError || recordsError;
+
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
-        <section className="mb-8">
-          <h1 className="text-3xl font-bold">Take Attendance</h1>
-          <p className="text-muted-foreground mt-2">Record attendance for today's class session</p>
+        <section className="mb-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">Take Attendance</h1>
+            <p className="text-muted-foreground mt-2">Record attendance for today's class session</p>
+          </div>
+          <DatabaseStatus />
         </section>
+        
+        {error && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              {error.message}
+              <div className="text-xs mt-1">
+                Don't worry - the app is using browser storage as a fallback.
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Session Info */}
@@ -301,4 +322,3 @@ const AttendancePage = () => {
 };
 
 export default AttendancePage;
-

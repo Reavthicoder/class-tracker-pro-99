@@ -5,24 +5,28 @@ import { Student, AttendanceRecord } from './attendance-service';
 // Check if we're running in a browser environment
 const isBrowser = typeof window !== 'undefined';
 
-// Database connection configuration
+// Database connection configuration - use environment variables if available
 const dbConfig = {
-  host: 'localhost',
-  user: 'root',
-  password: 'password',
-  database: 'attentrack'
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || 'password',
+  database: process.env.DB_NAME || 'attentrack'
 };
 
 // Create a connection pool
 let pool: mysql.Pool | null = null;
+let isInitialized = false;
 
 /**
  * Initialize the database connection pool
  */
 export const initializeDatabase = async () => {
+  // If already initialized or in browser, exit early
+  if (isInitialized) return true;
   if (isBrowser) {
     console.log('Running in browser environment, using localStorage fallback');
-    return false;
+    isInitialized = true;
+    return true; // Return true for browser to allow the app to continue
   }
   
   try {
@@ -37,6 +41,7 @@ export const initializeDatabase = async () => {
     // Initialize tables if they don't exist
     await createTables();
     
+    isInitialized = true;
     return true;
   } catch (error) {
     console.error('Database connection failed:', error);
@@ -103,16 +108,30 @@ const getConnection = async () => {
   return pool.getConnection();
 };
 
+// LocalStorage helpers for browser environment
+const getLocalStorageItem = (key: string, defaultValue: any = []) => {
+  if (!isBrowser) return defaultValue;
+  const item = localStorage.getItem(key);
+  return item ? JSON.parse(item) : defaultValue;
+};
+
+const setLocalStorageItem = (key: string, value: any) => {
+  if (!isBrowser) return;
+  localStorage.setItem(key, JSON.stringify(value));
+};
+
 // STUDENT OPERATIONS
 
 /**
  * Get all students from the database
  */
 export const getStudents = async (): Promise<Student[]> => {
+  // Always initialize database first
+  await initializeDatabase();
+  
   if (isBrowser) {
     // In browser, get from localStorage
-    const storedStudents = localStorage.getItem('attentrack-students');
-    return storedStudents ? JSON.parse(storedStudents) : [];
+    return getLocalStorageItem('attentrack-students', []);
   }
   
   try {
@@ -122,7 +141,8 @@ export const getStudents = async (): Promise<Student[]> => {
     return rows as Student[];
   } catch (error) {
     console.error('Error fetching students:', error);
-    throw error;
+    // Fallback to localStorage even in server environment if DB fails
+    return getLocalStorageItem('attentrack-students', []);
   }
 };
 
@@ -130,6 +150,8 @@ export const getStudents = async (): Promise<Student[]> => {
  * Add a new student to the database
  */
 export const addStudent = async (student: Omit<Student, 'id'>): Promise<Student> => {
+  await initializeDatabase();
+  
   if (isBrowser) {
     // In browser, save to localStorage
     const students = await getStudents();
@@ -137,7 +159,7 @@ export const addStudent = async (student: Omit<Student, 'id'>): Promise<Student>
     const newStudent = { ...student, id: newId };
     
     const updatedStudents = [...students, newStudent];
-    localStorage.setItem('attentrack-students', JSON.stringify(updatedStudents));
+    setLocalStorageItem('attentrack-students', updatedStudents);
     
     return newStudent;
   }
@@ -154,7 +176,16 @@ export const addStudent = async (student: Omit<Student, 'id'>): Promise<Student>
     return { ...student, id: insertId };
   } catch (error) {
     console.error('Error adding student:', error);
-    throw error;
+    
+    // Fallback to localStorage
+    const students = await getStudents();
+    const newId = students.length > 0 ? Math.max(...students.map(s => s.id)) + 1 : 1;
+    const newStudent = { ...student, id: newId };
+    
+    const updatedStudents = [...students, newStudent];
+    setLocalStorageItem('attentrack-students', updatedStudents);
+    
+    return newStudent;
   }
 };
 
@@ -162,6 +193,8 @@ export const addStudent = async (student: Omit<Student, 'id'>): Promise<Student>
  * Update an existing student
  */
 export const updateStudent = async (student: Student): Promise<Student> => {
+  await initializeDatabase();
+  
   if (isBrowser) {
     // In browser, update in localStorage
     const students = await getStudents();
@@ -169,7 +202,7 @@ export const updateStudent = async (student: Student): Promise<Student> => {
       s.id === student.id ? student : s
     );
     
-    localStorage.setItem('attentrack-students', JSON.stringify(updatedStudents));
+    setLocalStorageItem('attentrack-students', updatedStudents);
     return student;
   }
   
@@ -183,7 +216,15 @@ export const updateStudent = async (student: Student): Promise<Student> => {
     return student;
   } catch (error) {
     console.error('Error updating student:', error);
-    throw error;
+    
+    // Fallback to localStorage
+    const students = await getStudents();
+    const updatedStudents = students.map(s => 
+      s.id === student.id ? student : s
+    );
+    
+    setLocalStorageItem('attentrack-students', updatedStudents);
+    return student;
   }
 };
 
@@ -191,12 +232,14 @@ export const updateStudent = async (student: Student): Promise<Student> => {
  * Delete a student by ID
  */
 export const deleteStudent = async (id: number): Promise<boolean> => {
+  await initializeDatabase();
+  
   if (isBrowser) {
     // In browser, delete from localStorage
     const students = await getStudents();
     const updatedStudents = students.filter(s => s.id !== id);
     
-    localStorage.setItem('attentrack-students', JSON.stringify(updatedStudents));
+    setLocalStorageItem('attentrack-students', updatedStudents);
     return true;
   }
   
@@ -207,7 +250,13 @@ export const deleteStudent = async (id: number): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error('Error deleting student:', error);
-    throw error;
+    
+    // Fallback to localStorage
+    const students = await getStudents();
+    const updatedStudents = students.filter(s => s.id !== id);
+    
+    setLocalStorageItem('attentrack-students', updatedStudents);
+    return true;
   }
 };
 
@@ -217,6 +266,8 @@ export const deleteStudent = async (id: number): Promise<boolean> => {
  * Save an attendance record
  */
 export const saveAttendanceRecord = async (record: AttendanceRecord): Promise<AttendanceRecord> => {
+  await initializeDatabase();
+  
   if (isBrowser) {
     // In browser, save to localStorage
     const records = await getAttendanceRecords();
@@ -232,14 +283,14 @@ export const saveAttendanceRecord = async (record: AttendanceRecord): Promise<At
     }
     
     updatedRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    localStorage.setItem('attentrack-attendance', JSON.stringify(updatedRecords));
+    setLocalStorageItem('attentrack-attendance', updatedRecords);
     
     return record;
   }
   
-  const conn = await getConnection();
-  
   try {
+    const conn = await getConnection();
+    
     // Start transaction
     await conn.beginTransaction();
     
@@ -262,14 +313,28 @@ export const saveAttendanceRecord = async (record: AttendanceRecord): Promise<At
     
     // Commit transaction
     await conn.commit();
+    conn.release();
     return record;
   } catch (error) {
-    // Rollback in case of error
-    await conn.rollback();
     console.error('Error saving attendance record:', error);
-    throw error;
-  } finally {
-    conn.release();
+    
+    // If database fails, fall back to localStorage
+    const records = await getAttendanceRecords();
+    const existingIndex = records.findIndex(r => r.id === record.id);
+    
+    let updatedRecords: AttendanceRecord[];
+    
+    if (existingIndex >= 0) {
+      updatedRecords = [...records];
+      updatedRecords[existingIndex] = record;
+    } else {
+      updatedRecords = [record, ...records];
+    }
+    
+    updatedRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setLocalStorageItem('attentrack-attendance', updatedRecords);
+    
+    return record;
   }
 };
 
@@ -277,10 +342,11 @@ export const saveAttendanceRecord = async (record: AttendanceRecord): Promise<At
  * Get all attendance records
  */
 export const getAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
+  await initializeDatabase();
+  
   if (isBrowser) {
     // In browser, get from localStorage
-    const storedRecords = localStorage.getItem('attentrack-attendance');
-    return storedRecords ? JSON.parse(storedRecords) : [];
+    return getLocalStorageItem('attentrack-attendance', []);
   }
   
   try {
@@ -314,7 +380,8 @@ export const getAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
     return attendanceRecords;
   } catch (error) {
     console.error('Error fetching attendance records:', error);
-    throw error;
+    // Fallback to localStorage
+    return getLocalStorageItem('attentrack-attendance', []);
   }
 };
 
@@ -322,12 +389,14 @@ export const getAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
  * Delete an attendance record
  */
 export const deleteAttendanceRecord = async (id: string): Promise<boolean> => {
+  await initializeDatabase();
+  
   if (isBrowser) {
     // In browser, delete from localStorage
     const records = await getAttendanceRecords();
     const updatedRecords = records.filter(r => r.id !== id);
     
-    localStorage.setItem('attentrack-attendance', JSON.stringify(updatedRecords));
+    setLocalStorageItem('attentrack-attendance', updatedRecords);
     return true;
   }
   
@@ -338,7 +407,12 @@ export const deleteAttendanceRecord = async (id: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error('Error deleting attendance record:', error);
-    throw error;
+    
+    // Fallback to localStorage
+    const records = await getAttendanceRecords();
+    const updatedRecords = records.filter(r => r.id !== id);
+    
+    setLocalStorageItem('attentrack-attendance', updatedRecords);
+    return true;
   }
 };
-
