@@ -1,5 +1,6 @@
 import { Student, AttendanceRecord } from './attendance-service';
 import { DB_CONFIG, STORAGE_KEYS } from './constants';
+import { toast } from 'sonner';
 
 // Check if we're running in a browser environment
 const isBrowser = typeof window !== 'undefined';
@@ -15,17 +16,21 @@ const dbConfig = {
 // Create a connection pool
 let pool: any = null;
 let isInitialized = false;
+let forceLocalStorage = false;
 
 /**
  * Initialize the database connection pool
  */
 export const initializeDatabase = async () => {
-  // If already initialized or in browser, exit early
-  if (isInitialized) return true;
+  // If already initialized, exit early
+  if (isInitialized) return !forceLocalStorage;
+  
+  // In browser environment, we can't use MySQL directly
   if (isBrowser) {
     console.log('Running in browser environment, using localStorage fallback');
     isInitialized = true;
-    return true; // Return true for browser to allow the app to continue
+    forceLocalStorage = true;
+    return false;
   }
   
   try {
@@ -43,9 +48,13 @@ export const initializeDatabase = async () => {
     await createTables();
     
     isInitialized = true;
+    forceLocalStorage = false;
     return true;
   } catch (error) {
     console.error('Database connection failed:', error);
+    forceLocalStorage = true;
+    isInitialized = true;
+    toast.error('Failed to connect to MySQL database. Please check your credentials and try again.');
     return false;
   }
 };
@@ -109,18 +118,6 @@ const getConnection = async () => {
   return pool.getConnection();
 };
 
-// LocalStorage helpers for browser environment
-const getLocalStorageItem = (key: string, defaultValue: any = []) => {
-  if (!isBrowser) return defaultValue;
-  const item = localStorage.getItem(key);
-  return item ? JSON.parse(item) : defaultValue;
-};
-
-const setLocalStorageItem = (key: string, value: any) => {
-  if (!isBrowser) return;
-  localStorage.setItem(key, JSON.stringify(value));
-};
-
 // STUDENT OPERATIONS
 
 /**
@@ -130,8 +127,8 @@ export const getStudents = async (): Promise<Student[]> => {
   // Always initialize database first
   await initializeDatabase();
   
-  if (isBrowser) {
-    // In browser, get from localStorage
+  if (isBrowser || forceLocalStorage) {
+    // Only use localStorage in browser or if database connection failed
     return getLocalStorageItem(STORAGE_KEYS.STUDENTS, []);
   }
   
@@ -142,7 +139,7 @@ export const getStudents = async (): Promise<Student[]> => {
     return rows as Student[];
   } catch (error) {
     console.error('Error fetching students:', error);
-    // Fallback to localStorage even in server environment if DB fails
+    // Only fall back to localStorage if absolutely necessary
     return getLocalStorageItem(STORAGE_KEYS.STUDENTS, []);
   }
 };
@@ -153,8 +150,8 @@ export const getStudents = async (): Promise<Student[]> => {
 export const addStudent = async (student: Omit<Student, 'id'>): Promise<Student> => {
   await initializeDatabase();
   
-  if (isBrowser) {
-    // In browser, save to localStorage
+  if (isBrowser || forceLocalStorage) {
+    // Only use localStorage in browser or if database connection failed
     const students = await getStudents();
     const newId = students.length > 0 ? Math.max(...students.map(s => s.id)) + 1 : 1;
     const newStudent = { ...student, id: newId };
@@ -177,8 +174,9 @@ export const addStudent = async (student: Omit<Student, 'id'>): Promise<Student>
     return { ...student, id: insertId };
   } catch (error) {
     console.error('Error adding student:', error);
+    toast.error('Failed to add student to database. Using local storage as fallback.');
     
-    // Fallback to localStorage
+    // Fallback to localStorage only if database operation fails
     const students = await getStudents();
     const newId = students.length > 0 ? Math.max(...students.map(s => s.id)) + 1 : 1;
     const newStudent = { ...student, id: newId };
@@ -416,4 +414,16 @@ export const deleteAttendanceRecord = async (id: string): Promise<boolean> => {
     setLocalStorageItem(STORAGE_KEYS.ATTENDANCE, updatedRecords);
     return true;
   }
+};
+
+// LocalStorage helpers for browser environment or fallback
+const getLocalStorageItem = (key: string, defaultValue: any = []) => {
+  if (!isBrowser) return defaultValue;
+  const item = localStorage.getItem(key);
+  return item ? JSON.parse(item) : defaultValue;
+};
+
+const setLocalStorageItem = (key: string, value: any) => {
+  if (!isBrowser) return;
+  localStorage.setItem(key, JSON.stringify(value));
 };

@@ -6,11 +6,19 @@
 ### Prerequisites
 - Node.js (v16 or higher)
 - npm (v7 or higher)
-- MySQL Server (v8.0 or higher)
+- MySQL Server (v8.0 or higher) - **REQUIRED for full functionality**
 
-### Database Setup
+### Database Setup (Important!)
 
-1. **Create MySQL Database**
+1. **Install MySQL Server**
+   
+   If you don't have MySQL Server installed, download and install it from the [official MySQL website](https://dev.mysql.com/downloads/mysql/).
+
+2. **Start MySQL Server**
+   
+   Make sure your MySQL server is running before starting the application.
+
+3. **Create MySQL Database**
    
    Log in to MySQL and run the following commands:
 
@@ -44,9 +52,9 @@
    );
    ```
 
-2. **Configure Database Connection**
+4. **Configure Database Connection**
 
-   Create a `.env` file in the root of the project with the following content:
+   The `.env` file in the root of the project should have the following content with your MySQL credentials:
 
    ```
    VITE_DB_HOST=localhost
@@ -65,13 +73,15 @@
    npm install
    ```
 
-2. **Start Development Server**
+2. **Start Development Server (Important: Use Node.js environment)**
 
    ```bash
    npm run dev
    ```
 
-   This will start the application on http://localhost:8080
+   This will start the application on http://localhost:5173
+
+   **IMPORTANT**: For database functionality to work correctly, you must run the application from a Node.js environment, NOT by opening the HTML file directly in a browser.
 
 ### Running in Production
 
@@ -89,27 +99,36 @@ To run the application in production mode:
    npm run preview
    ```
 
-### Troubleshooting
+### Troubleshooting Database Connection
 
-- **Database Connection Issues:**
-  - Ensure MySQL server is running
-  - Verify your credentials in the `.env` file
-  - Check that the database `attentrack` exists
-  - The application will fall back to localStorage if database connection fails
+- **Check MySQL Server Status**
+  - Ensure MySQL server is running before starting the application
+  - On Windows: Check Services app to see if MySQL service is running
+  - On macOS: Run `mysql.server status` in terminal
+  - On Linux: Run `sudo service mysql status` or `sudo systemctl status mysql` in terminal
 
-- **Node.js Environment:**
-  - For the database features to work correctly, the application must be run in a Node.js environment
-  - When running in a browser, the app will automatically fall back to localStorage
+- **Verify Database Credentials**
+  - Double-check user, password and database name in `.env` file
+  - Ensure the MySQL user has proper permissions to access the database
+
+- **Test MySQL Connection Separately**
+  - Run `mysql -u root -p` and enter your password to verify you can connect
+  - Try `USE attentrack;` to ensure the database exists and is accessible
+
+- **Check Network Settings**
+  - If MySQL is on a different machine, ensure the host is correctly specified
+  - Check firewall settings to ensure MySQL port (default 3306) is open
 
 ### System Architecture
 
 The application uses:
 - **Frontend**: React, Tailwind CSS, shadcn/ui components
 - **State Management**: React Query
-- **Database**: MySQL (with localStorage fallback)
+- **Database**: MySQL (primary storage)
 - **API Layer**: Direct database connection in Node.js environment
 
 ### Important Notes
 
-- When running in a pure browser environment, the app uses localStorage
-- For full functionality with MySQL, use the Node.js-based development server
+- The application REQUIRES a MySQL database connection for full functionality
+- When running in a browser-only environment (without Node.js), most database features will not work
+- For optimal experience, always run in a Node.js environment with MySQL properly configured

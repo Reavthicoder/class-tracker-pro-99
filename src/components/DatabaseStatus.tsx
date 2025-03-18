@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Database, Server, Loader2 } from 'lucide-react';
+import { Database, Server, Loader2, AlertTriangle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DB_CONNECTION_STATUS } from '@/lib/constants';
 import { initializeDatabase } from '@/lib/database-service';
@@ -38,21 +38,21 @@ const DatabaseStatus = () => {
       variant: 'outline' as const
     },
     [DB_CONNECTION_STATUS.BROWSER]: {
-      icon: <Database className="h-3 w-3" />,
-      text: 'Using Browser Storage',
-      tooltip: 'Running in browser environment. Using localStorage for data storage.',
-      variant: 'default' as const
+      icon: <AlertTriangle className="h-3 w-3" />,
+      text: 'Browser Mode (No DB)',
+      tooltip: 'Running in browser environment. For full database functionality, please run the application in a Node.js environment.',
+      variant: 'warning' as const
     },
     [DB_CONNECTION_STATUS.CONNECTED]: {
       icon: <Server className="h-3 w-3" />,
-      text: 'Database Connected',
+      text: 'MySQL Connected',
       tooltip: 'Successfully connected to MySQL database.',
       variant: 'success' as const
     },
     [DB_CONNECTION_STATUS.DISCONNECTED]: {
       icon: <Server className="h-3 w-3" />,
-      text: 'Database Disconnected',
-      tooltip: 'Failed to connect to MySQL database. Using localStorage as fallback.',
+      text: 'MySQL Disconnected',
+      tooltip: 'Failed to connect to MySQL database. Please check your database credentials and ensure MySQL is running.',
       variant: 'destructive' as const
     }
   };
