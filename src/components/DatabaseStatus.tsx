@@ -41,7 +41,7 @@ const DatabaseStatus = () => {
       icon: <AlertTriangle className="h-3 w-3" />,
       text: 'Browser Mode (No DB)',
       tooltip: 'Running in browser environment. For full database functionality, please run the application in a Node.js environment.',
-      variant: 'warning' as const
+      variant: 'secondary' as const // Changed from 'warning' to 'secondary'
     },
     [DB_CONNECTION_STATUS.CONNECTED]: {
       icon: <Server className="h-3 w-3" />,
