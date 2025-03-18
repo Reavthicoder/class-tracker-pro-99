@@ -1,36 +1,31 @@
-
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { useStudents, useAttendanceRecords, generateAttendanceId, Student, getTodayDate } from '@/lib/attendance-service';
+import { useStudents, useAttendanceRecords, generateAttendanceId, getTodayDate } from '@/lib/attendance-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Calendar, CheckCircle2, XCircle, Clock, Search, Save, Loader2, Users, AlertCircle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import DatabaseStatus from '@/components/DatabaseStatus';
+import AddStudentDialog from '@/components/AddStudentDialog';
 
 const AttendancePage = () => {
   const { students, loading: loadingStudents, error: studentsError } = useStudents();
   const { records, saveAttendanceRecord, error: recordsError } = useAttendanceRecords();
   const { toast } = useToast();
   
-  // Form state
   const [classTitle, setClassTitle] = useState('');
   const [date, setDate] = useState(getTodayDate());
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
   
-  // Attendance state - initialize with all students present
   const [attendance, setAttendance] = useState<{
     studentId: number;
     status: 'present' | 'absent' | 'late';
   }[]>([]);
   
-  // Initialize attendance when students are loaded
   useEffect(() => {
     if (students.length > 0) {
       setAttendance(students.map(student => ({
@@ -40,13 +35,11 @@ const AttendancePage = () => {
     }
   }, [students]);
   
-  // Filter students based on search query
   const filteredStudents = students.filter(student => 
     student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  // Update status for a student
   const updateStatus = (studentId: number, status: 'present' | 'absent' | 'late') => {
     setAttendance(prev => 
       prev.map(item => 
@@ -55,7 +48,6 @@ const AttendancePage = () => {
     );
   };
   
-  // Mark all students as present
   const markAllPresent = () => {
     setAttendance(prev => 
       prev.map(item => ({ ...item, status: 'present' }))
@@ -67,7 +59,6 @@ const AttendancePage = () => {
     });
   };
   
-  // Save attendance record
   const saveAttendance = async () => {
     if (!classTitle) {
       toast({
@@ -88,18 +79,14 @@ const AttendancePage = () => {
         students: attendance
       };
       
-      // Save to service
       await saveAttendanceRecord(newRecord);
       
-      // Show success message
       toast({
         title: "Attendance saved successfully",
         description: `Recorded attendance for ${classTitle} on ${new Date(date).toLocaleDateString()}`,
       });
       
-      // Reset form
       setClassTitle('');
-      // Keep the attendance status as is for the next session
     } catch (error) {
       console.error('Error saving attendance:', error);
       toast({
@@ -112,7 +99,6 @@ const AttendancePage = () => {
     }
   };
   
-  // Count attendance stats
   const stats = {
     present: attendance.filter(a => a.status === 'present').length,
     absent: attendance.filter(a => a.status === 'absent').length,
@@ -147,7 +133,6 @@ const AttendancePage = () => {
         )}
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Session Info */}
           <Card className="col-span-1">
             <CardHeader>
               <CardTitle>Session Details</CardTitle>
@@ -217,7 +202,6 @@ const AttendancePage = () => {
             </CardFooter>
           </Card>
           
-          {/* Student List */}
           <Card className="col-span-1 lg:col-span-2">
             <CardHeader>
               <CardTitle>Student Attendance</CardTitle>
@@ -232,15 +216,18 @@ const AttendancePage = () => {
                   />
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={markAllPresent}
-                  className="whitespace-nowrap"
-                >
-                  <Users className="mr-2 h-4 w-4" />
-                  Mark All Present
-                </Button>
+                <div className="flex items-center gap-2">
+                  <AddStudentDialog />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={markAllPresent}
+                    className="whitespace-nowrap"
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    Mark All Present
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -251,7 +238,7 @@ const AttendancePage = () => {
                   </div>
                 ) : filteredStudents.length === 0 ? (
                   <div className="text-center p-6 text-muted-foreground">
-                    No students found matching your search.
+                    {searchQuery ? 'No students found matching your search.' : 'No students found. Add a student to get started.'}
                   </div>
                 ) : (
                   filteredStudents.map(student => {
