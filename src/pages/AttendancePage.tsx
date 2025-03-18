@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import DatabaseStatus from '@/components/DatabaseStatus';
 import AddStudentDialog from '@/components/AddStudentDialog';
+import { cn } from "@/lib/utils";
 
 const AttendancePage = () => {
   const { students, loading: loadingStudents, error: studentsError } = useStudents();
