@@ -10,6 +10,7 @@ export const checkDatabaseConnection = async (): Promise<boolean> => {
   // Skip in browser environment
   if (typeof window !== 'undefined') {
     console.log('Running in browser environment, using localStorage for data storage');
+    toast.info('Running in browser environment, using localStorage for data storage');
     return false;
   }
   

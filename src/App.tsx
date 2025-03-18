@@ -10,10 +10,20 @@ import NotFound from "./pages/NotFound";
 import AttendancePage from "./pages/AttendancePage";
 import ReportsPage from "./pages/ReportsPage";
 import SchedulePage from "./pages/SchedulePage";
+import { checkDatabaseConnection } from "./lib/db-check";
 
 const queryClient = new QueryClient();
 
 const App = () => {
+  // Check database connection on startup
+  useEffect(() => {
+    const checkDb = async () => {
+      await checkDatabaseConnection();
+    };
+    
+    checkDb();
+  }, []);
+
   // Preload fonts
   useEffect(() => {
     document.fonts.ready.then(() => {

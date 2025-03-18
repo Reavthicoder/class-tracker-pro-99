@@ -3,10 +3,10 @@
  * Database configuration constants
  */
 export const DB_CONFIG = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'password',
-  database: process.env.DB_DATABASE || 'attentrack',
+  host: import.meta.env.VITE_DB_HOST || 'localhost',
+  user: import.meta.env.VITE_DB_USER || 'root',
+  password: import.meta.env.VITE_DB_PASSWORD || 'Karthikeya#2005',
+  database: import.meta.env.VITE_DB_DATABASE || 'attentrack',
   // Additional configuration options
   connectionLimit: 10,
   waitForConnections: true,

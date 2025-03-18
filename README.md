@@ -1,69 +1,115 @@
-# Welcome to your Lovable project
 
-## Project info
+# AttenTrack - Attendance Tracking System
 
-**URL**: https://lovable.dev/projects/30759d6b-9519-4570-8ffc-aec6b67375fc
+## Project Setup Guide
 
-## How can I edit this code?
+### Prerequisites
+- Node.js (v16 or higher)
+- npm (v7 or higher)
+- MySQL Server (v8.0 or higher)
 
-There are several ways of editing your application.
+### Database Setup
 
-**Use Lovable**
+1. **Create MySQL Database**
+   
+   Log in to MySQL and run the following commands:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/30759d6b-9519-4570-8ffc-aec6b67375fc) and start prompting.
+   ```sql
+   CREATE DATABASE attentrack;
+   USE attentrack;
+   
+   -- Create students table
+   CREATE TABLE IF NOT EXISTS students (
+     id INT PRIMARY KEY AUTO_INCREMENT,
+     name VARCHAR(255) NOT NULL,
+     rollNumber VARCHAR(50) NOT NULL UNIQUE
+   );
+   
+   -- Create attendance_records table
+   CREATE TABLE IF NOT EXISTS attendance_records (
+     id VARCHAR(100) PRIMARY KEY,
+     date DATE NOT NULL,
+     classTitle VARCHAR(255) NOT NULL,
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   );
+   
+   -- Create student_attendance junction table
+   CREATE TABLE IF NOT EXISTS student_attendance (
+     id INT PRIMARY KEY AUTO_INCREMENT,
+     attendance_id VARCHAR(100) NOT NULL,
+     student_id INT NOT NULL,
+     status ENUM('present', 'absent', 'late') NOT NULL,
+     FOREIGN KEY (attendance_id) REFERENCES attendance_records(id) ON DELETE CASCADE,
+     FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+   );
+   ```
 
-Changes made via Lovable will be committed automatically to this repo.
+2. **Configure Database Connection**
 
-**Use your preferred IDE**
+   Create a `.env` file in the root of the project with the following content:
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+   ```
+   VITE_DB_HOST=localhost
+   VITE_DB_USER=root
+   VITE_DB_PASSWORD=Karthikeya#2005
+   VITE_DB_DATABASE=attentrack
+   ```
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+   Note: Replace the values with your actual MySQL credentials if different.
 
-Follow these steps:
+### Application Setup
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. **Install Dependencies**
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+   ```bash
+   npm install
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+2. **Start Development Server**
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+   ```bash
+   npm run dev
+   ```
 
-**Edit a file directly in GitHub**
+   This will start the application on http://localhost:8080
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Running in Production
 
-**Use GitHub Codespaces**
+To run the application in production mode:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1. **Build the Application**
 
-## What technologies are used for this project?
+   ```bash
+   npm run build
+   ```
 
-This project is built with .
+2. **Serve the Built Files**
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+   ```bash
+   npm run preview
+   ```
 
-## How can I deploy this project?
+### Troubleshooting
 
-Simply open [Lovable](https://lovable.dev/projects/30759d6b-9519-4570-8ffc-aec6b67375fc) and click on Share -> Publish.
+- **Database Connection Issues:**
+  - Ensure MySQL server is running
+  - Verify your credentials in the `.env` file
+  - Check that the database `attentrack` exists
+  - The application will fall back to localStorage if database connection fails
 
-## I want to use a custom domain - is that possible?
+- **Node.js Environment:**
+  - For the database features to work correctly, the application must be run in a Node.js environment
+  - When running in a browser, the app will automatically fall back to localStorage
 
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+### System Architecture
+
+The application uses:
+- **Frontend**: React, Tailwind CSS, shadcn/ui components
+- **State Management**: React Query
+- **Database**: MySQL (with localStorage fallback)
+- **API Layer**: Direct database connection in Node.js environment
+
+### Important Notes
+
+- When running in a pure browser environment, the app uses localStorage
+- For full functionality with MySQL, use the Node.js-based development server
