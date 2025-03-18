@@ -1,12 +1,20 @@
 
 # AttenTrack - Attendance Tracking System
 
+## Important Note: Data Storage
+
+This application is designed to store all data in a MySQL database when run properly in a Node.js environment. 
+
+**When run directly in the browser (e.g., via GitHub Pages or other static hosting), the app will fall back to localStorage for data storage. This is NOT recommended for production use.**
+
+For proper data storage in MySQL, follow the setup instructions below carefully.
+
 ## Project Setup Guide
 
 ### Prerequisites
 - Node.js (v16 or higher)
 - npm (v7 or higher)
-- MySQL Server (v8.0 or higher) - **REQUIRED for full functionality**
+- MySQL Server (v8.0 or higher) - **REQUIRED for proper data storage**
 
 ### Setup Instructions (Step by Step)
 
@@ -23,44 +31,23 @@
    - Linux: Run `sudo systemctl start mysql` or `sudo service mysql start`
 
 3. **Create Database and Tables**
-   - Open MySQL command line or a MySQL client like MySQL Workbench
-   - Run the following SQL commands:
-
+   - The application will automatically create the necessary tables when it first connects.
+   - However, you need to create the database first:
+   
    ```sql
    -- Create Database
    CREATE DATABASE IF NOT EXISTS attentrack;
-   USE attentrack;
-   
-   -- Create students table
-   CREATE TABLE IF NOT EXISTS students (
-     id INT PRIMARY KEY AUTO_INCREMENT,
-     name VARCHAR(255) NOT NULL,
-     rollNumber VARCHAR(50) NOT NULL UNIQUE
-   );
-   
-   -- Create attendance_records table
-   CREATE TABLE IF NOT EXISTS attendance_records (
-     id VARCHAR(100) PRIMARY KEY,
-     date DATE NOT NULL,
-     classTitle VARCHAR(255) NOT NULL,
-     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-   );
-   
-   -- Create student_attendance junction table
-   CREATE TABLE IF NOT EXISTS student_attendance (
-     id INT PRIMARY KEY AUTO_INCREMENT,
-     attendance_id VARCHAR(100) NOT NULL,
-     student_id INT NOT NULL,
-     status ENUM('present', 'absent', 'late') NOT NULL,
-     FOREIGN KEY (attendance_id) REFERENCES attendance_records(id) ON DELETE CASCADE,
-     FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
-   );
    ```
+
+   - The following tables will be created automatically when the app connects:
+     - `students` - Stores student information
+     - `attendance_records` - Stores attendance session records
+     - `student_attendance` - Junction table for student attendance status
 
 #### 2. Application Configuration
 
 1. **Configure Environment Variables**
-   - Create or edit the `.env` file in the root of the project:
+   - Create a `.env` file in the root of the project with the following content:
 
    ```
    VITE_DB_HOST=localhost
@@ -70,6 +57,7 @@
    ```
 
    - Replace `your_mysql_username` and `your_mysql_password` with your actual MySQL credentials.
+   - The database name should be `attentrack` (or match whatever you created in step 1.3)
 
 2. **Install Dependencies**
    - Open a terminal in the project directory
@@ -78,9 +66,9 @@
    npm install
    ```
 
-#### 3. Running in Node.js Environment
+#### 3. Running in Node.js Environment (REQUIRED for MySQL Storage)
 
-**IMPORTANT**: The application MUST be run in a Node.js environment for database functionality to work.
+**IMPORTANT**: The application MUST be run in a Node.js environment for MySQL database functionality to work.
 
 1. **Start Development Server**
    ```bash
@@ -93,14 +81,23 @@
    - A green "MySQL Connected" badge indicates successful connection.
    - A red "MySQL Disconnected" badge indicates connection failure.
 
-#### 4. Building for Production
+#### 4. Initial Data
+
+The application will automatically add the following students to the database when it first connects:
+- Sahsara (Roll Number: S001)
+- Karthikeya (Roll Number: K001)
+- Ayushi (Roll Number: A001)
+- Meghana Madasu (Roll Number: M001)
+- Sanjana (Roll Number: S002)
+
+#### 5. Building for Production
 
 1. **Build the Application**
    ```bash
    npm run build
    ```
 
-2. **Serve the Built Files**
+2. **Serve the Built Files with Node.js**
    ```bash
    npm run preview
    ```
@@ -129,8 +126,9 @@ If you see "MySQL Disconnected" status or database errors:
    - After connecting to MySQL, run: `SHOW DATABASES;`
    - Ensure "attentrack" is listed
 
-5. **Examine Console Logs**
+5. **Check Connection in Application Console**
    - Open browser developer tools (F12) and check the console for specific error messages
+   - If you see "Running in browser environment" messages, you are not running the app with Node.js
 
 ### Common Errors and Solutions
 
@@ -138,7 +136,7 @@ If you see "MySQL Disconnected" status or database errors:
    - Solution: Check your MySQL username and password in `.env` file
 
 2. **"ER_BAD_DB_ERROR: Unknown database 'attentrack'"**
-   - Solution: Run the database creation script from Step 1.3
+   - Solution: Make sure you've created the database with `CREATE DATABASE attentrack;`
 
 3. **"ECONNREFUSED"**
    - Solution: Make sure MySQL server is running
@@ -146,3 +144,4 @@ If you see "MySQL Disconnected" status or database errors:
 4. **Browser Mode (No DB)**
    - This message appears when running the app directly in a browser without Node.js
    - Solution: Always use `npm run dev` to start the application properly
+   - Remember that data will only be stored in MySQL when run with Node.js

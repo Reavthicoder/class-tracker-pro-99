@@ -1,3 +1,4 @@
+
 import { Student, AttendanceRecord } from './attendance-service';
 import { DB_CONFIG, STORAGE_KEYS } from './constants';
 import { toast } from 'sonner';
@@ -99,9 +100,43 @@ const createTables = async () => {
     `);
     
     console.log('Database tables created successfully');
+    
+    // Check if we need to add initial students
+    const [students] = await pool.execute('SELECT * FROM students');
+    if (Array.isArray(students) && students.length === 0) {
+      // Add initial students if table is empty
+      await addInitialStudents();
+    }
   } catch (error) {
     console.error('Error creating tables:', error);
     throw error;
+  }
+};
+
+/**
+ * Add initial students to the database
+ */
+const addInitialStudents = async () => {
+  if (!pool) return;
+  
+  const initialStudents = [
+    { name: 'Sahsara', rollNumber: 'S001' },
+    { name: 'Karthikeya', rollNumber: 'K001' },
+    { name: 'Ayushi', rollNumber: 'A001' },
+    { name: 'Meghana Madasu', rollNumber: 'M001' },
+    { name: 'Sanjana', rollNumber: 'S002' }
+  ];
+  
+  try {
+    for (const student of initialStudents) {
+      await pool.execute(
+        'INSERT INTO students (name, rollNumber) VALUES (?, ?)',
+        [student.name, student.rollNumber]
+      );
+    }
+    console.log('Initial students added successfully');
+  } catch (error) {
+    console.error('Error adding initial students:', error);
   }
 };
 
@@ -140,6 +175,7 @@ export const getStudents = async (): Promise<Student[]> => {
   } catch (error) {
     console.error('Error fetching students:', error);
     // Only fall back to localStorage if absolutely necessary
+    toast.error('Failed to fetch students from database. Using local storage as fallback.');
     return getLocalStorageItem(STORAGE_KEYS.STUDENTS, []);
   }
 };
@@ -343,7 +379,7 @@ export const saveAttendanceRecord = async (record: AttendanceRecord): Promise<At
 export const getAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
   await initializeDatabase();
   
-  if (isBrowser) {
+  if (isBrowser || forceLocalStorage) {
     // In browser, get from localStorage
     return getLocalStorageItem(STORAGE_KEYS.ATTENDANCE, []);
   }
@@ -380,6 +416,7 @@ export const getAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
   } catch (error) {
     console.error('Error fetching attendance records:', error);
     // Fallback to localStorage
+    toast.error('Failed to fetch attendance records from database. Using local storage as fallback.');
     return getLocalStorageItem(STORAGE_KEYS.ATTENDANCE, []);
   }
 };
