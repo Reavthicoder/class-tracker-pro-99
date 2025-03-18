@@ -40,7 +40,7 @@ const DatabaseStatus = () => {
     [DB_CONNECTION_STATUS.BROWSER]: {
       icon: <AlertTriangle className="h-3 w-3" />,
       text: 'Browser Mode (No DB)',
-      tooltip: 'Running in browser environment. For full database functionality, please run the application in a Node.js environment.',
+      tooltip: 'Running in browser environment. For full database functionality, please run the application with "npm run dev" in a Node.js environment.',
       variant: 'secondary' as const // Changed from 'warning' to 'secondary'
     },
     [DB_CONNECTION_STATUS.CONNECTED]: {
@@ -52,7 +52,7 @@ const DatabaseStatus = () => {
     [DB_CONNECTION_STATUS.DISCONNECTED]: {
       icon: <Server className="h-3 w-3" />,
       text: 'MySQL Disconnected',
-      tooltip: 'Failed to connect to MySQL database. Please check your database credentials and ensure MySQL is running.',
+      tooltip: 'Failed to connect to MySQL database. Please check your database credentials in the .env file and ensure MySQL is running. See README for troubleshooting steps.',
       variant: 'destructive' as const
     }
   };
