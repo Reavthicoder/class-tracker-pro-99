@@ -20,10 +20,11 @@ export const checkDatabaseConnection = async (): Promise<boolean> => {
     // Set a timeout to prevent endless loading state
     const connectionTimeout = setTimeout(() => {
       toast.error('MySQL connection timed out. Please check your database credentials and ensure MySQL is running.');
-    }, 5000);
+    }, 8000); // Increased timeout to 8 seconds
     
-    toast.loading('Connecting to MySQL database...');
+    toast.loading('Connecting to MySQL database...', { duration: 10000 });
     
+    // Explicitly pass credentials to ensure they're being used
     const isConnected = await initializeDatabase();
     
     // Clear the timeout as we got a response
@@ -35,12 +36,12 @@ export const checkDatabaseConnection = async (): Promise<boolean> => {
       return true;
     } else {
       console.warn('Failed to connect to MySQL database');
-      toast.error('Failed to connect to MySQL database. Check your MySQL installation and .env file settings. Run "mysql.server start" or "systemctl start mysql" if MySQL is not running.');
+      toast.error('Failed to connect to MySQL database. Check your MySQL installation and verify your credentials (user: root, password: Karthikeya#2005). Make sure MySQL is running with "mysql.server start" or "systemctl start mysql".');
       return false;
     }
   } catch (error) {
     console.error('Database connection error:', error);
-    toast.error('Database connection failed. Make sure MySQL is installed and running, and that your .env file has the correct credentials.');
+    toast.error('Database connection failed. Make sure MySQL is installed and running, and that your credentials are correct. Try running MySQL with: mysql -u root -p"Karthikeya#2005"');
     return false;
   }
 };

@@ -4,16 +4,16 @@
 export const DB_CONFIG = {
   host: import.meta.env.VITE_DB_HOST || 'localhost',
   user: import.meta.env.VITE_DB_USER || 'root',
-  password: import.meta.env.VITE_DB_PASSWORD || '',
+  password: import.meta.env.VITE_DB_PASSWORD || 'Karthikeya#2005',
   database: import.meta.env.VITE_DB_DATABASE || 'attentrack',
   // Additional configuration options
   connectionLimit: 10,
   waitForConnections: true,
   queueLimit: 0,
   // Add connection timeout to prevent hanging
-  connectTimeout: 10000,
+  connectTimeout: 15000, // Increased timeout
   // Add a shorter acquisition timeout
-  acquireTimeout: 5000
+  acquireTimeout: 10000  // Increased timeout
 };
 
 /**
@@ -38,6 +38,7 @@ export const ROUTES = {
 
 /**
  * Database tables SQL creation scripts
+ * Added explicit CHARACTER SET and COLLATION for better compatibility
  */
 export const SQL_SCRIPTS = {
   CREATE_TABLES: `
@@ -46,7 +47,7 @@ CREATE TABLE IF NOT EXISTS students (
   id INT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(255) NOT NULL,
   rollNumber VARCHAR(50) NOT NULL UNIQUE
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 -- Create attendance_records table
 CREATE TABLE IF NOT EXISTS attendance_records (
@@ -54,7 +55,7 @@ CREATE TABLE IF NOT EXISTS attendance_records (
   date DATE NOT NULL,
   classTitle VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 -- Create student_attendance junction table
 CREATE TABLE IF NOT EXISTS student_attendance (
@@ -64,7 +65,7 @@ CREATE TABLE IF NOT EXISTS student_attendance (
   status ENUM('present', 'absent', 'late') NOT NULL,
   FOREIGN KEY (attendance_id) REFERENCES attendance_records(id) ON DELETE CASCADE,
   FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
-);`
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;`
 };
 
 /**

@@ -21,9 +21,15 @@ sudo systemctl start mysql
 # Windows:
 # Use the Services application to start MySQL
 
+# Verify MySQL is running and accepting connections:
+mysql -u root -p
+# Enter your password: Karthikeya#2005
+# If successful, you'll see the MySQL prompt
+mysql> exit;
+
 # Create database (first time only)
 mysql -u root -p
-# Enter your password when prompted
+# Enter your password: Karthikeya#2005
 CREATE DATABASE attentrack;
 exit;
 
@@ -66,13 +72,28 @@ npm install mysql2
    \s
    ```
 
-4. **Create Database**
+4. **Test Connection**
+   ```bash
+   # Try connecting to MySQL directly to verify credentials
+   mysql -u root -p
+   # Enter password: Karthikeya#2005
+   
+   # If this fails, your username or password might be incorrect
+   ```
+
+5. **Create Database**
    ```bash
    # Login to MySQL
    mysql -u root -p
+   # Enter password: Karthikeya#2005
    
    # Create database
    CREATE DATABASE attentrack;
+   
+   # Verify database was created
+   SHOW DATABASES;
+   
+   # You should see 'attentrack' in the list
    
    # Exit MySQL
    exit;
@@ -80,16 +101,14 @@ npm install mysql2
 
 ### 3. Configure Environment Variables
 
-Create a `.env` file in the project root with:
+Make sure the `.env` file in the project root has these exact values:
 
 ```
 VITE_DB_HOST=localhost
 VITE_DB_USER=root
-VITE_DB_PASSWORD=your_mysql_password
+VITE_DB_PASSWORD=Karthikeya#2005
 VITE_DB_DATABASE=attentrack
 ```
-
-Replace `your_mysql_password` with your actual MySQL password.
 
 ### 4. Running the Application
 
@@ -98,7 +117,7 @@ Replace `your_mysql_password` with your actual MySQL password.
 npm run dev
 ```
 
-The application will be available at http://localhost:8080
+The application will be available at http://localhost:8080 or the port shown in your terminal.
 
 ### 5. Verify Database Connection
 
@@ -124,51 +143,116 @@ If you see "MySQL Disconnected" status or "Connecting to MySQL database..." appe
    # macOS
    mysql.server status
    
+   # Windows
+   # Check Services application
+   
    # Start if not running
    # Linux
    sudo systemctl start mysql
    
    # macOS
    mysql.server start
+   
+   # Windows
+   # Start in Services application
    ```
 
-2. **Check your credentials**
-   - Ensure the values in your `.env` file match your MySQL settings
-   - Try connecting manually: `mysql -u root -p` with your password
-   - If connection works manually but fails in the app, double-check your .env configuration
-
-3. **Database doesn't exist**
+2. **Check MySQL user permissions**
    ```bash
+   # Connect to MySQL
    mysql -u root -p
-   CREATE DATABASE attentrack;
-   exit;
-   ```
-
-4. **Reset tables** (if data is corrupted)
-   ```bash
-   mysql -u root -p
-   USE attentrack;
-   DROP TABLE IF EXISTS student_attendance;
-   DROP TABLE IF EXISTS attendance_records;
-   DROP TABLE IF EXISTS students;
-   exit;
-   ```
-   Then restart the application to recreate the tables.
-
-5. **Check MySQL user permissions**
-   ```bash
-   mysql -u root -p
-   GRANT ALL PRIVILEGES ON attentrack.* TO 'root'@'localhost';
+   # Enter your password
+   
+   # Make sure the root user has all privileges
+   GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION;
+   GRANT ALL PRIVILEGES ON attentrack.* TO 'root'@'localhost' WITH GRANT OPTION;
    FLUSH PRIVILEGES;
+   
+   # Check if the user exists and has correct privileges
+   SELECT user, host FROM mysql.user WHERE user = 'root';
+   SHOW GRANTS FOR 'root'@'localhost';
+   exit;
+   ```
+
+3. **Verify database exists and is accessible**
+   ```bash
+   mysql -u root -p
+   # Enter your password
+   
+   # Check if database exists
+   SHOW DATABASES;
+   
+   # Create it if it doesn't
+   CREATE DATABASE IF NOT EXISTS attentrack;
+   
+   # Try to use it
+   USE attentrack;
+   
+   # If successful, exit
+   exit;
+   ```
+
+4. **Remove any firewall or security restrictions**
+   - Ensure your firewall isn't blocking connections to MySQL (port 3306)
+   - Try setting the host to '127.0.0.1' instead of 'localhost' in your .env file
+
+5. **Reset MySQL password (if necessary)**
+   If you suspect the password might be incorrect, you can reset it:
+   ```bash
+   # On Linux
+   sudo mysqladmin -u root password "Karthikeya#2005"
+   
+   # On macOS
+   mysqladmin -u root password "Karthikeya#2005"
+   
+   # Or change it from within MySQL
+   mysql -u root -p
+   # Enter current password
+   ALTER USER 'root'@'localhost' IDENTIFIED BY 'Karthikeya#2005';
+   FLUSH PRIVILEGES;
+   exit;
+   ```
+
+6. **Manually create tables** (if automatic creation fails)
+   ```bash
+   mysql -u root -p
+   # Enter your password
+   USE attentrack;
+   
+   # Create tables manually using the SQL from constants.ts
+   CREATE TABLE IF NOT EXISTS students (
+     id INT PRIMARY KEY AUTO_INCREMENT,
+     name VARCHAR(255) NOT NULL,
+     rollNumber VARCHAR(50) NOT NULL UNIQUE
+   );
+
+   CREATE TABLE IF NOT EXISTS attendance_records (
+     id VARCHAR(100) PRIMARY KEY,
+     date DATE NOT NULL,
+     classTitle VARCHAR(255) NOT NULL,
+     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   );
+
+   CREATE TABLE IF NOT EXISTS student_attendance (
+     id INT PRIMARY KEY AUTO_INCREMENT,
+     attendance_id VARCHAR(100) NOT NULL,
+     student_id INT NOT NULL,
+     status ENUM('present', 'absent', 'late') NOT NULL,
+     FOREIGN KEY (attendance_id) REFERENCES attendance_records(id) ON DELETE CASCADE,
+     FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+   );
+   
+   # Exit MySQL
    exit;
    ```
 
 ### Common Error Messages
 
-- **"Access denied for user..."**: Update your credentials in the `.env` file
+- **"Access denied for user..."**: Update your credentials in the `.env` file or check user permissions with the steps above
 - **"Unknown database 'attentrack'"**: Create the database using the commands above
 - **"ECONNREFUSED"**: Make sure MySQL server is running
 - **Connection timeout**: Check firewall settings or try changing the host to '127.0.0.1' instead of 'localhost'
+- **"ER_NOT_SUPPORTED_AUTH_MODE"**: Run `ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'Karthikeya#2005';` in MySQL
 
 ## Data Storage
 
@@ -176,4 +260,3 @@ When run properly with Node.js and MySQL:
 - All student data is stored in the `students` table
 - All attendance records are stored in the `attendance_records` and `student_attendance` tables
 - LocalStorage is ONLY used as a fallback if database connection fails
-
