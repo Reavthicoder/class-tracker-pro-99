@@ -5,7 +5,7 @@
 export const DB_CONFIG = {
   host: import.meta.env.VITE_DB_HOST || 'localhost',
   user: import.meta.env.VITE_DB_USER || 'root',
-  password: import.meta.env.VITE_DB_PASSWORD || 'Karthikeya#2005',
+  password: import.meta.env.VITE_DB_PASSWORD || '',
   database: import.meta.env.VITE_DB_DATABASE || 'attentrack',
   // Additional configuration options
   connectionLimit: 10,
@@ -14,7 +14,8 @@ export const DB_CONFIG = {
 };
 
 /**
- * LocalStorage keys
+ * LocalStorage keys - only used as fallback when database is unavailable
+ * These should not be the primary storage mechanism
  */
 export const STORAGE_KEYS = {
   STUDENTS: 'attentrack-students',

@@ -1,147 +1,121 @@
 
 # AttenTrack - Attendance Tracking System
 
-## Important Note: Data Storage
+## IMPORTANT: MySQL Database Required
 
-This application is designed to store all data in a MySQL database when run properly in a Node.js environment. 
+This application requires a MySQL database for data storage. The application MUST be run in a Node.js environment using `npm run dev` command.
 
-**When run directly in the browser (e.g., via GitHub Pages or other static hosting), the app will fall back to localStorage for data storage. This is NOT recommended for production use.**
+**DATA WILL NOT BE STORED if the application is accessed directly through a browser without running it through Node.js.**
 
-For proper data storage in MySQL, follow the setup instructions below carefully.
-
-## Project Setup Guide
+## Project Setup Guide (Step by Step)
 
 ### Prerequisites
 - Node.js (v16 or higher)
 - npm (v7 or higher)
-- MySQL Server (v8.0 or higher) - **REQUIRED for proper data storage**
+- MySQL Server (v8.0 or higher) - **ABSOLUTELY REQUIRED**
 
-### Setup Instructions (Step by Step)
-
-#### 1. Database Configuration
+### 1. MySQL Database Setup
 
 1. **Install MySQL Server**
-   - Download and install MySQL Server from the [official MySQL website](https://dev.mysql.com/downloads/mysql/).
-   - Follow the installation instructions for your operating system.
-   - Make sure to note your MySQL username and password during installation.
+   - Download and install MySQL Server from the [official MySQL website](https://dev.mysql.com/downloads/mysql/)
+   - Follow the installation instructions for your operating system
+   - During installation, set a root password and remember it
 
 2. **Start MySQL Server**
    - Windows: Open Services, find MySQL and ensure it's running
    - macOS: Run `mysql.server start` in Terminal
    - Linux: Run `sudo systemctl start mysql` or `sudo service mysql start`
 
-3. **Create Database and Tables**
-   - The application will automatically create the necessary tables when it first connects.
-   - However, you need to create the database first:
-   
+3. **Create Database**
+   - Open MySQL command line:
+     - Windows: Use MySQL Command Line Client from Start Menu
+     - macOS/Linux: Run `mysql -u root -p` and enter your password
+   - Create the database with this command:
    ```sql
-   -- Create Database
-   CREATE DATABASE IF NOT EXISTS attentrack;
+   CREATE DATABASE attentrack;
    ```
+   - Exit MySQL command line with `exit;`
 
-   - The following tables will be created automatically when the app connects:
-     - `students` - Stores student information
-     - `attendance_records` - Stores attendance session records
-     - `student_attendance` - Junction table for student attendance status
+### 2. Application Configuration
 
-#### 2. Application Configuration
-
-1. **Configure Environment Variables**
-   - Create a `.env` file in the root of the project with the following content:
-
+1. **Set Environment Variables**
+   - Create a `.env` file in the root directory with these values:
    ```
    VITE_DB_HOST=localhost
-   VITE_DB_USER=your_mysql_username
+   VITE_DB_USER=root
    VITE_DB_PASSWORD=your_mysql_password
    VITE_DB_DATABASE=attentrack
    ```
-
-   - Replace `your_mysql_username` and `your_mysql_password` with your actual MySQL credentials.
-   - The database name should be `attentrack` (or match whatever you created in step 1.3)
+   - Replace `your_mysql_password` with your actual MySQL root password
 
 2. **Install Dependencies**
-   - Open a terminal in the project directory
-   - Run:
    ```bash
    npm install
    ```
 
-#### 3. Running in Node.js Environment (REQUIRED for MySQL Storage)
-
-**IMPORTANT**: The application MUST be run in a Node.js environment for MySQL database functionality to work.
+### 3. Running the Application (REQUIRED for MySQL Storage)
 
 1. **Start Development Server**
    ```bash
    npm run dev
    ```
-   This will start the application on http://localhost:5173 (or other port as configured)
+   This will start the application in development mode with MySQL integration
 
 2. **Verify Database Connection**
-   - After starting the application, check the database status indicator in the top-right corner.
-   - A green "MySQL Connected" badge indicates successful connection.
-   - A red "MySQL Disconnected" badge indicates connection failure.
+   - Check for "MySQL Connected" badge in the top right corner
+   - If it shows "MySQL Disconnected", see troubleshooting steps below
 
-#### 4. Initial Data
+### 4. Initial Data
 
-The application will automatically add the following students to the database when it first connects:
+When first run properly, the application will automatically add these students to the database:
 - Sahsara (Roll Number: S001)
 - Karthikeya (Roll Number: K001)
 - Ayushi (Roll Number: A001)
 - Meghana Madasu (Roll Number: M001)
 - Sanjana (Roll Number: S002)
 
-#### 5. Building for Production
-
-1. **Build the Application**
-   ```bash
-   npm run build
-   ```
-
-2. **Serve the Built Files with Node.js**
-   ```bash
-   npm run preview
-   ```
-
 ### Troubleshooting Database Connection
 
-If you see "MySQL Disconnected" status or database errors:
+If you see "MySQL Disconnected" status:
 
-1. **Verify MySQL Server is Running**
-   - Windows: Check Services app
-   - macOS: Run `mysql.server status` in Terminal
-   - Linux: Run `sudo systemctl status mysql` or `sudo service mysql status`
+1. **Verify MySQL is Running**
+   - Windows: Check Services
+   - macOS: Run `mysql.server status`
+   - Linux: Run `sudo systemctl status mysql`
 
-2. **Check Database Credentials**
-   - Ensure your `.env` file has correct values for:
-     - `VITE_DB_HOST` (usually "localhost")
-     - `VITE_DB_USER` (your MySQL username)
-     - `VITE_DB_PASSWORD` (your MySQL password)
-     - `VITE_DB_DATABASE` (should be "attentrack")
+2. **Check MySQL Credentials**
+   - Verify your MySQL username and password in the `.env` file
+   - Try connecting manually: `mysql -u root -p` with your password
 
-3. **Test Direct MySQL Connection**
-   - Run: `mysql -u your_mysql_username -p` and enter your password
-   - If this fails, the issue is with your MySQL installation or credentials
+3. **Check Database Exists**
+   - Connect to MySQL and run: `SHOW DATABASES;`
+   - Ensure `attentrack` is listed
 
-4. **Check Database Existence**
-   - After connecting to MySQL, run: `SHOW DATABASES;`
-   - Ensure "attentrack" is listed
+4. **Check Port Availability**
+   - Default MySQL port is 3306
+   - Ensure no firewall is blocking this port
 
-5. **Check Connection in Application Console**
-   - Open browser developer tools (F12) and check the console for specific error messages
-   - If you see "Running in browser environment" messages, you are not running the app with Node.js
+5. **Restart MySQL Service**
+   - Windows: Restart in Services
+   - macOS: Run `mysql.server restart`
+   - Linux: Run `sudo systemctl restart mysql`
 
-### Common Errors and Solutions
+6. **Check Error Logs**
+   - Open browser console (F12) for detailed error messages
+   - MySQL logs are usually in /var/log/mysql/ on Linux/macOS
+
+### Common Error Messages
 
 1. **"Access denied for user..."**
-   - Solution: Check your MySQL username and password in `.env` file
+   - Your MySQL username or password in `.env` is incorrect
+   - Solution: Update VITE_DB_USER and VITE_DB_PASSWORD in `.env`
 
-2. **"ER_BAD_DB_ERROR: Unknown database 'attentrack'"**
-   - Solution: Make sure you've created the database with `CREATE DATABASE attentrack;`
+2. **"Unknown database 'attentrack'"**
+   - The database doesn't exist
+   - Solution: Connect to MySQL and run `CREATE DATABASE attentrack;`
 
 3. **"ECONNREFUSED"**
-   - Solution: Make sure MySQL server is running
+   - MySQL server is not running or unreachable
+   - Solution: Start MySQL server and ensure it's running on default port (3306)
 
-4. **Browser Mode (No DB)**
-   - This message appears when running the app directly in a browser without Node.js
-   - Solution: Always use `npm run dev` to start the application properly
-   - Remember that data will only be stored in MySQL when run with Node.js
+Remember: This application is designed to work ONLY with a MySQL database in a Node.js environment!

@@ -8,9 +8,9 @@ import { toast } from 'sonner';
  */
 export const checkDatabaseConnection = async (): Promise<boolean> => {
   // Skip in browser environment
-  if (typeof window !== 'undefined') {
-    console.log('Running in browser environment, using localStorage for data storage');
-    toast.warning('Running in browser environment. For full database functionality, please run the application using Node.js with "npm run dev" command. Data will be stored in localStorage, not in MySQL.');
+  if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+    console.log('Running in non-local browser environment, data storage is not available');
+    toast.error('This application requires a Node.js environment with MySQL database. Data storage is not available in this browser environment. Please run the application locally using "npm run dev" command.');
     return false;
   }
   
@@ -26,12 +26,12 @@ export const checkDatabaseConnection = async (): Promise<boolean> => {
       return true;
     } else {
       console.warn('Failed to connect to MySQL database');
-      toast.error('Failed to connect to MySQL database. Data will be stored in localStorage as a fallback. Please check your database credentials in the .env file and ensure MySQL is running.');
+      toast.error('Failed to connect to MySQL database. Please check your database credentials in the .env file and ensure MySQL is running. See README for troubleshooting steps.');
       return false;
     }
   } catch (error) {
     console.error('Database connection error:', error);
-    toast.error('Database connection failed. Using localStorage fallback. Please check your database settings in the .env file and follow the troubleshooting steps in the README.');
+    toast.error('Database connection failed. Please check your database settings in the .env file and follow the troubleshooting steps in the README.');
     return false;
   }
 };
