@@ -5,9 +5,33 @@
 
 This application requires a MySQL database for data storage. The application MUST be run in a Node.js environment using `npm run dev` command.
 
-**DATA WILL NOT BE STORED if the application is accessed directly through a browser without running it through Node.js.**
+**DATA WILL NOT BE STORED in MySQL if the application is accessed directly through a browser without running it through Node.js.**
 
-## Project Setup Guide (Step by Step)
+## Quick Start Guide
+
+```bash
+# Install dependencies
+npm install
+
+# Start MySQL server (if not already running)
+# macOS:
+mysql.server start
+# Linux:
+sudo systemctl start mysql
+# Windows:
+# Use the Services application to start MySQL
+
+# Create database (first time only)
+mysql -u root -p
+# Enter your password when prompted
+CREATE DATABASE attentrack;
+exit;
+
+# Start the application
+npm run dev
+```
+
+## Complete Project Setup Guide (Step by Step)
 
 ### 1. Install Dependencies
 
@@ -30,8 +54,19 @@ npm install mysql2
    - Windows: Open Services, find MySQL and start it
    - macOS: Run `mysql.server start`
    - Linux: Run `sudo systemctl start mysql`
+   
+   **IMPORTANT**: Make sure MySQL is actually running before proceeding!
 
-3. **Create Database and User**
+3. **Check MySQL Status**
+   ```bash
+   # macOS and Linux
+   mysqladmin -u root -p status
+   
+   # Windows (in MySQL Command Line Client)
+   \s
+   ```
+
+4. **Create Database**
    ```bash
    # Login to MySQL
    mysql -u root -p
@@ -78,7 +113,7 @@ Look for "Connected to MySQL database successfully" in the console and toast not
 
 ### Database Connection Issues
 
-If you see "MySQL Disconnected" status:
+If you see "MySQL Disconnected" status or "Connecting to MySQL database..." appears for a long time:
 
 1. **Verify MySQL is running**
    ```bash
@@ -100,6 +135,7 @@ If you see "MySQL Disconnected" status:
 2. **Check your credentials**
    - Ensure the values in your `.env` file match your MySQL settings
    - Try connecting manually: `mysql -u root -p` with your password
+   - If connection works manually but fails in the app, double-check your .env configuration
 
 3. **Database doesn't exist**
    ```bash
@@ -119,11 +155,20 @@ If you see "MySQL Disconnected" status:
    ```
    Then restart the application to recreate the tables.
 
+5. **Check MySQL user permissions**
+   ```bash
+   mysql -u root -p
+   GRANT ALL PRIVILEGES ON attentrack.* TO 'root'@'localhost';
+   FLUSH PRIVILEGES;
+   exit;
+   ```
+
 ### Common Error Messages
 
 - **"Access denied for user..."**: Update your credentials in the `.env` file
 - **"Unknown database 'attentrack'"**: Create the database using the commands above
 - **"ECONNREFUSED"**: Make sure MySQL server is running
+- **Connection timeout**: Check firewall settings or try changing the host to '127.0.0.1' instead of 'localhost'
 
 ## Data Storage
 

@@ -1,4 +1,3 @@
-
 import { Student, AttendanceRecord } from './attendance-service';
 import { DB_CONFIG, STORAGE_KEYS } from './constants';
 import { toast } from 'sonner';
@@ -11,7 +10,12 @@ const dbConfig = {
   host: DB_CONFIG.host,
   user: DB_CONFIG.user,
   password: DB_CONFIG.password,
-  database: DB_CONFIG.database
+  database: DB_CONFIG.database,
+  connectionLimit: DB_CONFIG.connectionLimit,
+  waitForConnections: DB_CONFIG.waitForConnections,
+  queueLimit: DB_CONFIG.queueLimit,
+  connectTimeout: DB_CONFIG.connectTimeout,
+  acquireTimeout: DB_CONFIG.acquireTimeout
 };
 
 // Create a connection pool
@@ -35,21 +39,72 @@ export const initializeDatabase = async () => {
   }
   
   try {
+    console.log('Initializing database...');
+    
     // Only import mysql2 in a node environment
     const mysql = await import('mysql2/promise');
-    pool = mysql.createPool(dbConfig);
-    console.log('Database connection pool initialized');
     
-    // Check connection
-    const connection = await pool.getConnection();
-    console.log('Database connected successfully');
-    connection.release();
+    // Test database exists first
+    try {
+      const tempPool = mysql.createPool({
+        ...dbConfig,
+        connectTimeout: 5000, // Shorter timeout for initial test
+        multipleStatements: true
+      });
+      
+      // Try connection
+      console.log('Testing database connection...');
+      const conn = await tempPool.getConnection();
+      console.log('Initial connection test successful');
+      conn.release();
+      
+      // If we reached here, connection works, so set the main pool
+      pool = tempPool;
+    } catch (error: any) {
+      console.error('Initial connection test failed:', error.message);
+      
+      // If database doesn't exist, try to create it
+      if (error.message.includes('Unknown database') || error.code === 'ER_BAD_DB_ERROR') {
+        console.log('Database does not exist, attempting to create it...');
+        
+        // Create a pool without specifying the database to create it
+        const rootPool = mysql.createPool({
+          host: dbConfig.host,
+          user: dbConfig.user,
+          password: dbConfig.password,
+          connectionLimit: 1,
+          multipleStatements: true
+        });
+        
+        try {
+          const conn = await rootPool.getConnection();
+          await conn.query(`CREATE DATABASE IF NOT EXISTS ${dbConfig.database};`);
+          console.log(`Database '${dbConfig.database}' created successfully`);
+          conn.release();
+          await rootPool.end();
+          
+          // Now create the main pool with the database specified
+          pool = mysql.createPool(dbConfig);
+        } catch (createError) {
+          console.error('Failed to create database:', createError);
+          forceLocalStorage = true;
+          isInitialized = true;
+          return false;
+        }
+      } else {
+        // Other connection error
+        forceLocalStorage = true;
+        isInitialized = true;
+        return false;
+      }
+    }
     
     // Initialize tables if they don't exist
     await createTables();
     
     isInitialized = true;
     forceLocalStorage = false;
+    console.log('Database initialization complete.');
     return true;
   } catch (error) {
     console.error('Database connection failed:', error);

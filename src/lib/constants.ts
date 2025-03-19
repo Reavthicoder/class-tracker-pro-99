@@ -1,4 +1,3 @@
-
 /**
  * Database configuration constants
  */
@@ -10,7 +9,11 @@ export const DB_CONFIG = {
   // Additional configuration options
   connectionLimit: 10,
   waitForConnections: true,
-  queueLimit: 0
+  queueLimit: 0,
+  // Add connection timeout to prevent hanging
+  connectTimeout: 10000,
+  // Add a shorter acquisition timeout
+  acquireTimeout: 5000
 };
 
 /**

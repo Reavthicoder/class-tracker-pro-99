@@ -16,9 +16,18 @@ export const checkDatabaseConnection = async (): Promise<boolean> => {
   
   try {
     console.log('Attempting to connect to MySQL database...');
+    
+    // Set a timeout to prevent endless loading state
+    const connectionTimeout = setTimeout(() => {
+      toast.error('MySQL connection timed out. Please check your database credentials and ensure MySQL is running.');
+    }, 5000);
+    
     toast.loading('Connecting to MySQL database...');
     
     const isConnected = await initializeDatabase();
+    
+    // Clear the timeout as we got a response
+    clearTimeout(connectionTimeout);
     
     if (isConnected) {
       console.log('Successfully connected to MySQL database');
