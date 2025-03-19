@@ -14,8 +14,8 @@ export const DB_CONFIG = {
 };
 
 /**
- * LocalStorage keys - only used as fallback when database is unavailable
- * These should not be the primary storage mechanism
+ * LocalStorage keys - ONLY used as emergency fallback
+ * The application is designed to use MySQL database for all data storage
  */
 export const STORAGE_KEYS = {
   STUDENTS: 'attentrack-students',
