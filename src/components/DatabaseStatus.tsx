@@ -97,12 +97,13 @@ const DatabaseStatus = () => {
           <AlertDescription>
             <p>Could not connect to MySQL database. Please verify:</p>
             <ul className="list-disc ml-5 mt-2">
-              <li>MySQL service is running</li>
+              <li>MySQL service is running (check using <code>mysql.server status</code> or <code>systemctl status mysql</code>)</li>
               <li>User <code>{DB_CONFIG.user}</code> exists and password is correct</li>
-              <li>Database <code>{DB_CONFIG.database}</code> exists</li>
+              <li>Database <code>{DB_CONFIG.database}</code> exists (create it if not: <code>CREATE DATABASE {DB_CONFIG.database};</code>)</li>
               <li>User has permissions to access the database</li>
+              <li>There are no firewall issues blocking port 3306</li>
             </ul>
-            {errorDetail && <p className="mt-2 font-mono text-sm">{errorDetail}</p>}
+            {errorDetail && <p className="mt-2 font-mono text-sm bg-gray-800 text-white p-2 rounded">{errorDetail}</p>}
           </AlertDescription>
         </Alert>
       )}

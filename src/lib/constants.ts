@@ -12,9 +12,9 @@ export const DB_CONFIG = {
   waitForConnections: true,
   queueLimit: 0,
   // Add connection timeout to prevent hanging
-  connectTimeout: 30000, // Increased timeout for initial connection
+  connectTimeout: 60000, // Increased timeout for initial connection
   // Add a longer acquisition timeout
-  acquireTimeout: 25000  // Increased timeout
+  acquireTimeout: 60000  // Increased timeout
 };
 
 /**

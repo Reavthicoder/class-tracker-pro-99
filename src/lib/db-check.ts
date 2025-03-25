@@ -8,6 +8,8 @@ import { DB_CONFIG } from './constants';
  * This can be imported and called in the main App component
  */
 export const checkDatabaseConnection = async (): Promise<boolean> => {
+  console.log('Starting database connection check...');
+  
   // In a browser environment that's not localhost, show a clear message
   if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
     console.log('Running in non-local browser environment, MySQL database is required');
@@ -22,9 +24,9 @@ export const checkDatabaseConnection = async (): Promise<boolean> => {
     // Set a timeout to prevent endless loading state
     const connectionTimeout = setTimeout(() => {
       toast.error(`MySQL connection timed out. Please check your database credentials and ensure MySQL is running. User: ${DB_CONFIG.user}, Host: ${DB_CONFIG.host}, Database: ${DB_CONFIG.database}`);
-    }, 15000);
+    }, 30000);
     
-    toast.loading('Connecting to MySQL database...', { duration: 18000 });
+    toast.loading('Connecting to MySQL database...', { duration: 35000 });
     
     // Initialize database with explicit credentials
     const isConnected = await initializeDatabase();

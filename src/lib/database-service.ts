@@ -26,73 +26,95 @@ export const initializeDatabase = async () => {
   // If already initialized, exit early
   if (isInitialized) return true;
   
+  // Check if we're in a browser environment
+  if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
+    console.log('Browser environment detected, cannot connect to MySQL');
+    return false;
+  }
+  
   try {
-    console.log('Initializing MySQL database...');
+    console.log('Initializing MySQL database connection...');
+    console.log('Using configuration:', JSON.stringify({
+      host: dbConfig.host,
+      user: dbConfig.user,
+      database: dbConfig.database,
+      connectTimeout: dbConfig.connectTimeout
+    }));
     
     // Only import mysql2 in a node environment
-    const mysql = await import('mysql2/promise');
-    
-    // Test database exists first
     try {
-      const tempPool = mysql.createPool({
-        ...dbConfig,
-        connectTimeout: 10000, // Longer timeout for initial test
-        multipleStatements: true
-      });
+      const mysql = await import('mysql2/promise');
       
-      // Try connection
-      console.log('Testing MySQL database connection...');
-      const conn = await tempPool.getConnection();
-      console.log('Initial MySQL connection test successful');
-      conn.release();
-      
-      // If we reached here, connection works, so set the main pool
-      pool = tempPool;
-    } catch (error: any) {
-      console.error('Initial MySQL connection test failed:', error.message);
-      
-      // If database doesn't exist, try to create it
-      if (error.message.includes('Unknown database') || error.code === 'ER_BAD_DB_ERROR') {
-        console.log('MySQL database does not exist, attempting to create it...');
-        
-        // Create a pool without specifying the database to create it
-        const rootPool = mysql.createPool({
-          host: dbConfig.host,
-          user: dbConfig.user,
-          password: dbConfig.password,
-          connectionLimit: 1,
+      // Test database exists first
+      try {
+        const tempPool = mysql.createPool({
+          ...dbConfig,
+          connectTimeout: 20000, // Longer timeout for initial test
           multipleStatements: true
         });
         
-        try {
-          const conn = await rootPool.getConnection();
-          await conn.query(`CREATE DATABASE IF NOT EXISTS ${dbConfig.database};`);
-          console.log(`MySQL database '${dbConfig.database}' created successfully`);
-          conn.release();
-          await rootPool.end();
+        // Try connection
+        console.log('Testing MySQL database connection...');
+        const conn = await tempPool.getConnection();
+        console.log('Initial MySQL connection test successful');
+        conn.release();
+        
+        // If we reached here, connection works, so set the main pool
+        pool = tempPool;
+      } catch (error: any) {
+        console.error('Initial MySQL connection test failed:', error.message);
+        
+        // If database doesn't exist, try to create it
+        if (error.message.includes('Unknown database') || error.code === 'ER_BAD_DB_ERROR') {
+          console.log('MySQL database does not exist, attempting to create it...');
           
-          // Now create the main pool with the database specified
-          pool = mysql.createPool(dbConfig);
-        } catch (createError) {
-          console.error('Failed to create MySQL database:', createError);
-          throw new Error('Failed to create MySQL database. Please ensure MySQL server is running and credentials are correct.');
+          // Create a pool without specifying the database to create it
+          const rootPool = mysql.createPool({
+            host: dbConfig.host,
+            user: dbConfig.user,
+            password: dbConfig.password,
+            connectionLimit: 1,
+            multipleStatements: true
+          });
+          
+          try {
+            const conn = await rootPool.getConnection();
+            await conn.query(`CREATE DATABASE IF NOT EXISTS ${dbConfig.database};`);
+            console.log(`MySQL database '${dbConfig.database}' created successfully`);
+            conn.release();
+            await rootPool.end();
+            
+            // Now create the main pool with the database specified
+            pool = mysql.createPool(dbConfig);
+          } catch (createError) {
+            console.error('Failed to create MySQL database:', createError);
+            throw new Error('Failed to create MySQL database. Please ensure MySQL server is running and credentials are correct.');
+          }
+        } else if (error.message.includes('Access denied')) {
+          console.error('MySQL access denied. Username or password might be incorrect.');
+          throw new Error(`MySQL access denied for user '${dbConfig.user}'. Please check your username and password.`);
+        } else if (error.message.includes('ECONNREFUSED')) {
+          console.error('MySQL connection refused. Server might not be running.');
+          throw new Error(`MySQL connection refused at ${dbConfig.host}. Please ensure MySQL server is running.`);
+        } else {
+          // Other connection error
+          throw error;
         }
-      } else {
-        // Other connection error
-        throw new Error(`MySQL connection error: ${error.message}`);
       }
+      
+      // Initialize tables if they don't exist
+      await createTables();
+      
+      isInitialized = true;
+      console.log('MySQL database initialization complete.');
+      return true;
+    } catch (importError) {
+      console.error('Failed to import mysql2 module:', importError);
+      throw new Error('Failed to import mysql2 module. This might be because the application is running in a browser environment without Node.js.');
     }
-    
-    // Initialize tables if they don't exist
-    await createTables();
-    
-    isInitialized = true;
-    console.log('MySQL database initialization complete.');
-    return true;
   } catch (error) {
     console.error('MySQL database connection failed:', error);
-    toast.error('Failed to connect to MySQL database. Please check your credentials and ensure MySQL server is running.');
-    throw new Error('MySQL database connection failed. This application requires a MySQL database to function.');
+    throw error;
   }
 };
 
@@ -370,3 +392,4 @@ export const deleteAttendanceRecord = async (id: string): Promise<boolean> => {
     throw new Error('Failed to delete attendance record from MySQL database');
   }
 };
+
