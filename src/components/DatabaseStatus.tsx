@@ -3,11 +3,13 @@ import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Database, Server, Loader2, AlertTriangle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { DB_CONNECTION_STATUS } from '@/lib/constants';
+import { DB_CONNECTION_STATUS, DB_CONFIG } from '@/lib/constants';
 import { initializeDatabase } from '@/lib/database-service';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const DatabaseStatus = () => {
   const [status, setStatus] = useState<typeof DB_CONNECTION_STATUS[keyof typeof DB_CONNECTION_STATUS]>(DB_CONNECTION_STATUS.CHECKING);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   
   useEffect(() => {
     const checkStatus = async () => {
@@ -19,11 +21,23 @@ const DatabaseStatus = () => {
         }
         
         // Try to initialize database connection
+        console.log('Checking MySQL connection status...');
+        console.log(`Host: ${DB_CONFIG.host}, User: ${DB_CONFIG.user}, Database: ${DB_CONFIG.database}`);
         const isConnected = await initializeDatabase();
         setStatus(isConnected ? DB_CONNECTION_STATUS.CONNECTED : DB_CONNECTION_STATUS.DISCONNECTED);
+        
+        if (!isConnected) {
+          setErrorDetail(`Failed to connect to MySQL at ${DB_CONFIG.host} with user ${DB_CONFIG.user} for database ${DB_CONFIG.database}.`);
+        }
       } catch (error) {
         console.error('MySQL database connection check failed:', error);
         setStatus(DB_CONNECTION_STATUS.DISCONNECTED);
+        
+        if (error instanceof Error) {
+          setErrorDetail(error.message);
+        } else {
+          setErrorDetail('Unknown error connecting to MySQL database');
+        }
       }
     };
     
@@ -52,7 +66,7 @@ const DatabaseStatus = () => {
     [DB_CONNECTION_STATUS.DISCONNECTED]: {
       icon: <Server className="h-3 w-3" />,
       text: 'MySQL Disconnected',
-      tooltip: 'Failed to connect to MySQL database. Please check your database credentials in the .env file and ensure MySQL is running. See README for troubleshooting steps.',
+      tooltip: `Failed to connect to MySQL database. MySQL should be running with user: ${DB_CONFIG.user} and database: ${DB_CONFIG.database}`,
       variant: 'destructive' as const
     }
   };
@@ -60,19 +74,39 @@ const DatabaseStatus = () => {
   const currentStatus = statusInfo[status];
   
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Badge variant={currentStatus.variant} className="gap-1">
-            {currentStatus.icon}
-            <span>{currentStatus.text}</span>
-          </Badge>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{currentStatus.tooltip}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant={currentStatus.variant} className="gap-1">
+              {currentStatus.icon}
+              <span>{currentStatus.text}</span>
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{currentStatus.tooltip}</p>
+            {errorDetail && <p className="text-red-500 mt-1">{errorDetail}</p>}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
+      {status === DB_CONNECTION_STATUS.DISCONNECTED && (
+        <Alert variant="destructive" className="mt-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Database Connection Failed</AlertTitle>
+          <AlertDescription>
+            <p>Could not connect to MySQL database. Please verify:</p>
+            <ul className="list-disc ml-5 mt-2">
+              <li>MySQL service is running</li>
+              <li>User <code>{DB_CONFIG.user}</code> exists and password is correct</li>
+              <li>Database <code>{DB_CONFIG.database}</code> exists</li>
+              <li>User has permissions to access the database</li>
+            </ul>
+            {errorDetail && <p className="mt-2 font-mono text-sm">{errorDetail}</p>}
+          </AlertDescription>
+        </Alert>
+      )}
+    </>
   );
 };
 
