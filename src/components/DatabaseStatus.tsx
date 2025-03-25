@@ -12,8 +12,8 @@ const DatabaseStatus = () => {
   useEffect(() => {
     const checkStatus = async () => {
       try {
-        // In a browser environment, we can't use MySQL directly
-        if (typeof window !== 'undefined') {
+        // In a browser environment, we can't directly connect to MySQL
+        if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
           setStatus(DB_CONNECTION_STATUS.BROWSER);
           return;
         }
@@ -22,7 +22,7 @@ const DatabaseStatus = () => {
         const isConnected = await initializeDatabase();
         setStatus(isConnected ? DB_CONNECTION_STATUS.CONNECTED : DB_CONNECTION_STATUS.DISCONNECTED);
       } catch (error) {
-        console.error('Database connection check failed:', error);
+        console.error('MySQL database connection check failed:', error);
         setStatus(DB_CONNECTION_STATUS.DISCONNECTED);
       }
     };
@@ -33,15 +33,15 @@ const DatabaseStatus = () => {
   const statusInfo = {
     [DB_CONNECTION_STATUS.CHECKING]: {
       icon: <Loader2 className="h-3 w-3 animate-spin" />,
-      text: 'Checking DB...',
-      tooltip: 'Checking database connection status...',
+      text: 'Checking MySQL...',
+      tooltip: 'Checking MySQL database connection status...',
       variant: 'outline' as const
     },
     [DB_CONNECTION_STATUS.BROWSER]: {
       icon: <AlertTriangle className="h-3 w-3" />,
-      text: 'Browser Mode (No DB)',
-      tooltip: 'Running in browser environment. For full database functionality, please run the application with "npm run dev" in a Node.js environment.',
-      variant: 'secondary' as const // Changed from 'warning' to 'secondary'
+      text: 'MySQL Required',
+      tooltip: 'This application requires a Node.js environment with MySQL database. Please run the application locally using "npm run dev" command.',
+      variant: 'secondary' as const
     },
     [DB_CONNECTION_STATUS.CONNECTED]: {
       icon: <Server className="h-3 w-3" />,

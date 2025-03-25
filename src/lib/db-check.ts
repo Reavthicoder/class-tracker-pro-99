@@ -7,9 +7,9 @@ import { toast } from 'sonner';
  * This can be imported and called in the main App component
  */
 export const checkDatabaseConnection = async (): Promise<boolean> => {
-  // Skip in browser environment
+  // In a browser environment that's not localhost, show a clear message
   if (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) {
-    console.log('Running in non-local browser environment, data storage is not available');
+    console.log('Running in non-local browser environment, MySQL database is required');
     toast.error('This application requires a Node.js environment with MySQL database. Please run the application locally using "npm run dev" command.');
     return false;
   }
@@ -19,12 +19,12 @@ export const checkDatabaseConnection = async (): Promise<boolean> => {
     
     // Set a timeout to prevent endless loading state
     const connectionTimeout = setTimeout(() => {
-      toast.error('MySQL connection timed out. Please check your database credentials and ensure MySQL is running.');
-    }, 8000); // Increased timeout to 8 seconds
+      toast.error('MySQL connection timed out. Please check your database credentials (user: root, password: Karthikeya#2005) and ensure MySQL is running.');
+    }, 10000);
     
-    toast.loading('Connecting to MySQL database...', { duration: 10000 });
+    toast.loading('Connecting to MySQL database...', { duration: 12000 });
     
-    // Explicitly pass credentials to ensure they're being used
+    // Initialize database with explicit credentials
     const isConnected = await initializeDatabase();
     
     // Clear the timeout as we got a response
@@ -32,7 +32,7 @@ export const checkDatabaseConnection = async (): Promise<boolean> => {
     
     if (isConnected) {
       console.log('Successfully connected to MySQL database');
-      toast.success('Connected to MySQL database successfully. All data will be stored in MySQL.');
+      toast.success('Connected to MySQL database successfully.');
       return true;
     } else {
       console.warn('Failed to connect to MySQL database');
@@ -40,8 +40,8 @@ export const checkDatabaseConnection = async (): Promise<boolean> => {
       return false;
     }
   } catch (error) {
-    console.error('Database connection error:', error);
-    toast.error('Database connection failed. Make sure MySQL is installed and running, and that your credentials are correct. Try running MySQL with: mysql -u root -p"Karthikeya#2005"');
+    console.error('MySQL database connection error:', error);
+    toast.error('MySQL database connection failed. Make sure MySQL is installed and running, and that your credentials are correct (user: root, password: Karthikeya#2005).');
     return false;
   }
 };

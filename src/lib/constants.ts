@@ -1,3 +1,4 @@
+
 /**
  * Database configuration constants
  */
@@ -11,18 +12,9 @@ export const DB_CONFIG = {
   waitForConnections: true,
   queueLimit: 0,
   // Add connection timeout to prevent hanging
-  connectTimeout: 15000, // Increased timeout
+  connectTimeout: 20000, // Increased timeout
   // Add a shorter acquisition timeout
-  acquireTimeout: 10000  // Increased timeout
-};
-
-/**
- * LocalStorage keys - ONLY used as emergency fallback
- * The application is designed to use MySQL database for all data storage
- */
-export const STORAGE_KEYS = {
-  STUDENTS: 'attentrack-students',
-  ATTENDANCE: 'attentrack-attendance'
+  acquireTimeout: 15000  // Increased timeout
 };
 
 /**

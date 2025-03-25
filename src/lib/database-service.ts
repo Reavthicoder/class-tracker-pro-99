@@ -1,9 +1,6 @@
 import { Student, AttendanceRecord } from './attendance-service';
-import { DB_CONFIG, STORAGE_KEYS } from './constants';
+import { DB_CONFIG } from './constants';
 import { toast } from 'sonner';
-
-// Check if we're running in a browser environment
-const isBrowser = typeof window !== 'undefined';
 
 // Database connection configuration
 const dbConfig = {
@@ -21,25 +18,16 @@ const dbConfig = {
 // Create a connection pool
 let pool: any = null;
 let isInitialized = false;
-let forceLocalStorage = false;
 
 /**
  * Initialize the database connection pool
  */
 export const initializeDatabase = async () => {
   // If already initialized, exit early
-  if (isInitialized) return !forceLocalStorage;
-  
-  // In browser environment, we can't use MySQL directly
-  if (isBrowser) {
-    console.log('Running in browser environment, using localStorage fallback');
-    isInitialized = true;
-    forceLocalStorage = true;
-    return false;
-  }
+  if (isInitialized) return true;
   
   try {
-    console.log('Initializing database...');
+    console.log('Initializing MySQL database...');
     
     // Only import mysql2 in a node environment
     const mysql = await import('mysql2/promise');
@@ -48,24 +36,24 @@ export const initializeDatabase = async () => {
     try {
       const tempPool = mysql.createPool({
         ...dbConfig,
-        connectTimeout: 5000, // Shorter timeout for initial test
+        connectTimeout: 10000, // Longer timeout for initial test
         multipleStatements: true
       });
       
       // Try connection
-      console.log('Testing database connection...');
+      console.log('Testing MySQL database connection...');
       const conn = await tempPool.getConnection();
-      console.log('Initial connection test successful');
+      console.log('Initial MySQL connection test successful');
       conn.release();
       
       // If we reached here, connection works, so set the main pool
       pool = tempPool;
     } catch (error: any) {
-      console.error('Initial connection test failed:', error.message);
+      console.error('Initial MySQL connection test failed:', error.message);
       
       // If database doesn't exist, try to create it
       if (error.message.includes('Unknown database') || error.code === 'ER_BAD_DB_ERROR') {
-        console.log('Database does not exist, attempting to create it...');
+        console.log('MySQL database does not exist, attempting to create it...');
         
         // Create a pool without specifying the database to create it
         const rootPool = mysql.createPool({
@@ -79,23 +67,19 @@ export const initializeDatabase = async () => {
         try {
           const conn = await rootPool.getConnection();
           await conn.query(`CREATE DATABASE IF NOT EXISTS ${dbConfig.database};`);
-          console.log(`Database '${dbConfig.database}' created successfully`);
+          console.log(`MySQL database '${dbConfig.database}' created successfully`);
           conn.release();
           await rootPool.end();
           
           // Now create the main pool with the database specified
           pool = mysql.createPool(dbConfig);
         } catch (createError) {
-          console.error('Failed to create database:', createError);
-          forceLocalStorage = true;
-          isInitialized = true;
-          return false;
+          console.error('Failed to create MySQL database:', createError);
+          throw new Error('Failed to create MySQL database. Please ensure MySQL server is running and credentials are correct.');
         }
       } else {
         // Other connection error
-        forceLocalStorage = true;
-        isInitialized = true;
-        return false;
+        throw new Error(`MySQL connection error: ${error.message}`);
       }
     }
     
@@ -103,15 +87,12 @@ export const initializeDatabase = async () => {
     await createTables();
     
     isInitialized = true;
-    forceLocalStorage = false;
-    console.log('Database initialization complete.');
+    console.log('MySQL database initialization complete.');
     return true;
   } catch (error) {
-    console.error('Database connection failed:', error);
-    forceLocalStorage = true;
-    isInitialized = true;
-    toast.error('Failed to connect to MySQL database. Please check your credentials and try again.');
-    return false;
+    console.error('MySQL database connection failed:', error);
+    toast.error('Failed to connect to MySQL database. Please check your credentials and ensure MySQL server is running.');
+    throw new Error('MySQL database connection failed. This application requires a MySQL database to function.');
   }
 };
 
@@ -119,8 +100,7 @@ export const initializeDatabase = async () => {
  * Create necessary tables if they don't exist
  */
 const createTables = async () => {
-  if (isBrowser) return; // Skip in browser
-  if (!pool) throw new Error('Database not initialized');
+  if (!pool) throw new Error('MySQL database not initialized');
   
   try {
     // Create students table
@@ -129,7 +109,7 @@ const createTables = async () => {
         id INT PRIMARY KEY AUTO_INCREMENT,
         name VARCHAR(255) NOT NULL,
         rollNumber VARCHAR(50) NOT NULL UNIQUE
-      )
+      ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
     `);
     
     // Create attendance_records table
@@ -139,7 +119,7 @@ const createTables = async () => {
         date DATE NOT NULL,
         classTitle VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
+      ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
     `);
     
     // Create student_attendance junction table
@@ -151,10 +131,10 @@ const createTables = async () => {
         status ENUM('present', 'absent', 'late') NOT NULL,
         FOREIGN KEY (attendance_id) REFERENCES attendance_records(id) ON DELETE CASCADE,
         FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
-      )
+      ) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
     `);
     
-    console.log('Database tables created successfully');
+    console.log('MySQL database tables created successfully');
     
     // Check if we need to add initial students
     const [students] = await pool.execute('SELECT * FROM students');
@@ -163,7 +143,7 @@ const createTables = async () => {
       await addInitialStudents();
     }
   } catch (error) {
-    console.error('Error creating tables:', error);
+    console.error('Error creating MySQL tables:', error);
     throw error;
   }
 };
@@ -189,9 +169,9 @@ const addInitialStudents = async () => {
         [student.name, student.rollNumber]
       );
     }
-    console.log('Initial students added successfully');
+    console.log('Initial students added successfully to MySQL database');
   } catch (error) {
-    console.error('Error adding initial students:', error);
+    console.error('Error adding initial students to MySQL:', error);
   }
 };
 
@@ -199,12 +179,10 @@ const addInitialStudents = async () => {
  * Get a database connection from the pool
  */
 const getConnection = async () => {
-  if (isBrowser) throw new Error('Cannot get database connection in browser');
-  
   if (!pool) {
     await initializeDatabase();
   }
-  if (!pool) throw new Error('Failed to initialize database');
+  if (!pool) throw new Error('Failed to initialize MySQL database');
   return pool.getConnection();
 };
 
@@ -217,21 +195,15 @@ export const getStudents = async (): Promise<Student[]> => {
   // Always initialize database first
   await initializeDatabase();
   
-  if (isBrowser || forceLocalStorage) {
-    // Only use localStorage in browser or if database connection failed
-    return getLocalStorageItem(STORAGE_KEYS.STUDENTS, []);
-  }
-  
   try {
     const conn = await getConnection();
     const [rows] = await conn.execute('SELECT * FROM students ORDER BY name');
     conn.release();
     return rows as Student[];
   } catch (error) {
-    console.error('Error fetching students:', error);
-    // Only fall back to localStorage if absolutely necessary
-    toast.error('Failed to fetch students from database. Using local storage as fallback.');
-    return getLocalStorageItem(STORAGE_KEYS.STUDENTS, []);
+    console.error('Error fetching students from MySQL:', error);
+    toast.error('Failed to fetch students from MySQL database.');
+    throw new Error('Failed to fetch students from MySQL database');
   }
 };
 
@@ -240,18 +212,6 @@ export const getStudents = async (): Promise<Student[]> => {
  */
 export const addStudent = async (student: Omit<Student, 'id'>): Promise<Student> => {
   await initializeDatabase();
-  
-  if (isBrowser || forceLocalStorage) {
-    // Only use localStorage in browser or if database connection failed
-    const students = await getStudents();
-    const newId = students.length > 0 ? Math.max(...students.map(s => s.id)) + 1 : 1;
-    const newStudent = { ...student, id: newId };
-    
-    const updatedStudents = [...students, newStudent];
-    setLocalStorageItem(STORAGE_KEYS.STUDENTS, updatedStudents);
-    
-    return newStudent;
-  }
   
   try {
     const conn = await getConnection();
@@ -264,18 +224,9 @@ export const addStudent = async (student: Omit<Student, 'id'>): Promise<Student>
     const insertId = (result as any).insertId;
     return { ...student, id: insertId };
   } catch (error) {
-    console.error('Error adding student:', error);
-    toast.error('Failed to add student to database. Using local storage as fallback.');
-    
-    // Fallback to localStorage only if database operation fails
-    const students = await getStudents();
-    const newId = students.length > 0 ? Math.max(...students.map(s => s.id)) + 1 : 1;
-    const newStudent = { ...student, id: newId };
-    
-    const updatedStudents = [...students, newStudent];
-    setLocalStorageItem(STORAGE_KEYS.STUDENTS, updatedStudents);
-    
-    return newStudent;
+    console.error('Error adding student to MySQL:', error);
+    toast.error('Failed to add student to MySQL database.');
+    throw new Error('Failed to add student to MySQL database');
   }
 };
 
@@ -284,17 +235,6 @@ export const addStudent = async (student: Omit<Student, 'id'>): Promise<Student>
  */
 export const updateStudent = async (student: Student): Promise<Student> => {
   await initializeDatabase();
-  
-  if (isBrowser) {
-    // In browser, update in localStorage
-    const students = await getStudents();
-    const updatedStudents = students.map(s => 
-      s.id === student.id ? student : s
-    );
-    
-    setLocalStorageItem(STORAGE_KEYS.STUDENTS, updatedStudents);
-    return student;
-  }
   
   try {
     const conn = await getConnection();
@@ -305,16 +245,9 @@ export const updateStudent = async (student: Student): Promise<Student> => {
     conn.release();
     return student;
   } catch (error) {
-    console.error('Error updating student:', error);
-    
-    // Fallback to localStorage
-    const students = await getStudents();
-    const updatedStudents = students.map(s => 
-      s.id === student.id ? student : s
-    );
-    
-    setLocalStorageItem(STORAGE_KEYS.STUDENTS, updatedStudents);
-    return student;
+    console.error('Error updating student in MySQL:', error);
+    toast.error('Failed to update student in MySQL database.');
+    throw new Error('Failed to update student in MySQL database');
   }
 };
 
@@ -324,29 +257,15 @@ export const updateStudent = async (student: Student): Promise<Student> => {
 export const deleteStudent = async (id: number): Promise<boolean> => {
   await initializeDatabase();
   
-  if (isBrowser) {
-    // In browser, delete from localStorage
-    const students = await getStudents();
-    const updatedStudents = students.filter(s => s.id !== id);
-    
-    setLocalStorageItem(STORAGE_KEYS.STUDENTS, updatedStudents);
-    return true;
-  }
-  
   try {
     const conn = await getConnection();
     await conn.execute('DELETE FROM students WHERE id = ?', [id]);
     conn.release();
     return true;
   } catch (error) {
-    console.error('Error deleting student:', error);
-    
-    // Fallback to localStorage
-    const students = await getStudents();
-    const updatedStudents = students.filter(s => s.id !== id);
-    
-    setLocalStorageItem(STORAGE_KEYS.STUDENTS, updatedStudents);
-    return true;
+    console.error('Error deleting student from MySQL:', error);
+    toast.error('Failed to delete student from MySQL database.');
+    throw new Error('Failed to delete student from MySQL database');
   }
 };
 
@@ -357,26 +276,6 @@ export const deleteStudent = async (id: number): Promise<boolean> => {
  */
 export const saveAttendanceRecord = async (record: AttendanceRecord): Promise<AttendanceRecord> => {
   await initializeDatabase();
-  
-  if (isBrowser) {
-    // In browser, save to localStorage
-    const records = await getAttendanceRecords();
-    const existingIndex = records.findIndex(r => r.id === record.id);
-    
-    let updatedRecords: AttendanceRecord[];
-    
-    if (existingIndex >= 0) {
-      updatedRecords = [...records];
-      updatedRecords[existingIndex] = record;
-    } else {
-      updatedRecords = [record, ...records];
-    }
-    
-    updatedRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setLocalStorageItem(STORAGE_KEYS.ATTENDANCE, updatedRecords);
-    
-    return record;
-  }
   
   try {
     const conn = await getConnection();
@@ -406,25 +305,9 @@ export const saveAttendanceRecord = async (record: AttendanceRecord): Promise<At
     conn.release();
     return record;
   } catch (error) {
-    console.error('Error saving attendance record:', error);
-    
-    // If database fails, fall back to localStorage
-    const records = await getAttendanceRecords();
-    const existingIndex = records.findIndex(r => r.id === record.id);
-    
-    let updatedRecords: AttendanceRecord[];
-    
-    if (existingIndex >= 0) {
-      updatedRecords = [...records];
-      updatedRecords[existingIndex] = record;
-    } else {
-      updatedRecords = [record, ...records];
-    }
-    
-    updatedRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setLocalStorageItem(STORAGE_KEYS.ATTENDANCE, updatedRecords);
-    
-    return record;
+    console.error('Error saving attendance record to MySQL:', error);
+    toast.error('Failed to save attendance record to MySQL database.');
+    throw new Error('Failed to save attendance record to MySQL database');
   }
 };
 
@@ -433,11 +316,6 @@ export const saveAttendanceRecord = async (record: AttendanceRecord): Promise<At
  */
 export const getAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
   await initializeDatabase();
-  
-  if (isBrowser || forceLocalStorage) {
-    // In browser, get from localStorage
-    return getLocalStorageItem(STORAGE_KEYS.ATTENDANCE, []);
-  }
   
   try {
     const conn = await getConnection();
@@ -469,10 +347,9 @@ export const getAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
     conn.release();
     return attendanceRecords;
   } catch (error) {
-    console.error('Error fetching attendance records:', error);
-    // Fallback to localStorage
-    toast.error('Failed to fetch attendance records from database. Using local storage as fallback.');
-    return getLocalStorageItem(STORAGE_KEYS.ATTENDANCE, []);
+    console.error('Error fetching attendance records from MySQL:', error);
+    toast.error('Failed to fetch attendance records from MySQL database.');
+    throw new Error('Failed to fetch attendance records from MySQL database');
   }
 };
 
@@ -482,40 +359,14 @@ export const getAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
 export const deleteAttendanceRecord = async (id: string): Promise<boolean> => {
   await initializeDatabase();
   
-  if (isBrowser) {
-    // In browser, delete from localStorage
-    const records = await getAttendanceRecords();
-    const updatedRecords = records.filter(r => r.id !== id);
-    
-    setLocalStorageItem(STORAGE_KEYS.ATTENDANCE, updatedRecords);
-    return true;
-  }
-  
   try {
     const conn = await getConnection();
     await conn.execute('DELETE FROM attendance_records WHERE id = ?', [id]);
     conn.release();
     return true;
   } catch (error) {
-    console.error('Error deleting attendance record:', error);
-    
-    // Fallback to localStorage
-    const records = await getAttendanceRecords();
-    const updatedRecords = records.filter(r => r.id !== id);
-    
-    setLocalStorageItem(STORAGE_KEYS.ATTENDANCE, updatedRecords);
-    return true;
+    console.error('Error deleting attendance record from MySQL:', error);
+    toast.error('Failed to delete attendance record from MySQL database.');
+    throw new Error('Failed to delete attendance record from MySQL database');
   }
-};
-
-// LocalStorage helpers for browser environment or fallback
-const getLocalStorageItem = (key: string, defaultValue: any = []) => {
-  if (!isBrowser) return defaultValue;
-  const item = localStorage.getItem(key);
-  return item ? JSON.parse(item) : defaultValue;
-};
-
-const setLocalStorageItem = (key: string, value: any) => {
-  if (!isBrowser) return;
-  localStorage.setItem(key, JSON.stringify(value));
 };

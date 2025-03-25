@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import * as db from './database-service';
 
@@ -19,90 +18,6 @@ export interface AttendanceRecord {
   }[];
 }
 
-// Sample Indian student names
-const studentNames = [
-  "Aarav Sharma", "Aditi Patel", "Arjun Singh", "Ananya Verma", "Advait Joshi",
-  "Aisha Khan", "Aryan Mehta", "Avni Gupta", "Dhruv Kumar", "Diya Reddy",
-  "Ishaan Malhotra", "Isha Kapoor", "Kabir Bedi", "Kiara Agarwal", "Krishna Rao",
-  "Lakshmi Nair", "Manav Choudhary", "Meera Banerjee", "Neha Desai", "Nikhil Gandhi",
-  "Ojas Trivedi", "Pari Saxena", "Pranav Thakur", "Prisha Iyer", "Rahul Dubey",
-  "Riya Shah", "Rohan Bajaj", "Saanvi Chauhan", "Samar Ahuja", "Sanya Bhatia",
-  "Shaurya Sen", "Shreya Sharma", "Siddharth Pillai", "Siya Chakraborty", "Tanvi Menon",
-  "Tara Hegde", "Udayan Chowdhury", "Vanya Singh", "Vedant Khanna", "Vihaan Mehra",
-  "Yash Mitra", "Zara Ahmed", "Dev Kumar", "Anika Lahiri", "Arnav Bhatt",
-  "Kavya Goyal", "Reyansh Rana", "Ishita Sen", "Vivaan Malik", "Myra Prasad"
-];
-
-// Generate 50 student objects
-const generateStudents = (): Student[] => {
-  return studentNames.map((name, index) => ({
-    id: index + 1,
-    name,
-    rollNumber: `R${(index + 1).toString().padStart(3, '0')}`
-  }));
-};
-
-// Initialize students
-const initialStudents = generateStudents();
-
-// Generate a random day in the last 21 days
-const generateRandomDate = () => {
-  const now = new Date();
-  const daysAgo = Math.floor(Math.random() * 21);
-  const pastDate = new Date(now);
-  pastDate.setDate(now.getDate() - daysAgo);
-  return pastDate.toISOString().split('T')[0];
-};
-
-// Generate sample class titles
-const classTitles = [
-  "Mathematics 101", 
-  "Physics 201", 
-  "Chemistry 101", 
-  "Biology 301", 
-  "Computer Science 201", 
-  "English Literature",
-  "History of India"
-];
-
-// Generate initial attendance records (past 3 weeks of random data)
-const generateInitialAttendanceRecords = (): AttendanceRecord[] => {
-  const records: AttendanceRecord[] = [];
-  
-  // Generate 15 random attendance records
-  for (let i = 0; i < 15; i++) {
-    const date = generateRandomDate();
-    const classTitle = classTitles[Math.floor(Math.random() * classTitles.length)];
-    
-    const students = initialStudents.map(student => {
-      // Random status with 80% chance of present, 15% absent, 5% late
-      const rand = Math.random();
-      let status: 'present' | 'absent' | 'late' = 'present';
-      
-      if (rand > 0.8 && rand < 0.95) {
-        status = 'absent';
-      } else if (rand >= 0.95) {
-        status = 'late';
-      }
-      
-      return {
-        studentId: student.id,
-        status
-      };
-    });
-    
-    records.push({
-      id: `attendance-${date}-${i}`,
-      date,
-      classTitle,
-      students
-    });
-  }
-  
-  // Sort records by date (newest first)
-  return records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-};
-
 // Initialize database and seed with sample data if needed
 let dbInitialized = false;
 
@@ -110,65 +25,18 @@ const initDb = async () => {
   if (dbInitialized) return;
   
   try {
-    console.log('Initializing database...');
+    console.log('Initializing MySQL database from attendance service...');
     await db.initializeDatabase();
-    
-    // Check if we have students in the database
-    const students = await db.getStudents();
-    
-    // If no students found, seed with initial data
-    if (students.length === 0) {
-      console.log('No students found. Seeding database with initial students...');
-      
-      // Add students in batches to avoid overwhelming the connection
-      const batches = [];
-      for (let i = 0; i < initialStudents.length; i += 10) {
-        batches.push(initialStudents.slice(i, i + 10));
-      }
-      
-      for (const batch of batches) {
-        await Promise.all(
-          batch.map(student => 
-            db.addStudent({ name: student.name, rollNumber: student.rollNumber })
-          )
-        );
-      }
-      
-      // Now seed with initial attendance records
-      console.log('Seeding database with initial attendance records...');
-      const records = generateInitialAttendanceRecords();
-      
-      // Add records in batches
-      const recordBatches = [];
-      for (let i = 0; i < records.length; i += 5) {
-        recordBatches.push(records.slice(i, i + 5));
-      }
-      
-      for (const batch of recordBatches) {
-        await Promise.all(
-          batch.map(record => db.saveAttendanceRecord(record))
-        );
-      }
-    }
-    
     dbInitialized = true;
-    console.log('Database initialization complete.');
+    console.log('MySQL database initialization complete from attendance service.');
   } catch (error) {
-    console.error('Failed to initialize database:', error);
-    // Continue anyway - the app will use localStorage fallback
+    console.error('Failed to initialize MySQL database:', error);
+    throw new Error('This application requires a MySQL database to function');
   }
 };
 
-// Call initDb when the file is imported (but with a slight delay in browser)
-if (typeof window !== 'undefined') {
-  // In browser, delay initialization to avoid blocking rendering
-  setTimeout(() => {
-    initDb().catch(err => console.error('Delayed DB init failed:', err));
-  }, 1000);
-} else {
-  // In Node.js environment, initialize immediately
-  initDb().catch(err => console.error('DB init failed:', err));
-}
+// Call initDb when the file is imported
+initDb().catch(err => console.error('DB init failed:', err));
 
 // Hooks for accessing data
 export const useStudents = () => {
@@ -189,11 +57,9 @@ export const useStudents = () => {
       const data = await db.getStudents();
       setStudents(data);
     } catch (err) {
-      console.error('Error fetching students:', err);
-      setError(err instanceof Error ? err : new Error('Unknown error fetching students'));
-      
-      // Fallback to sample data if DB fails
-      setStudents(initialStudents);
+      console.error('Error fetching students from MySQL:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch students from MySQL database'));
+      throw new Error('This application requires a MySQL database to function');
     } finally {
       setLoading(false);
     }
@@ -210,9 +76,9 @@ export const useStudents = () => {
       await fetchStudents(); // Refresh list
       return newStudent;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error adding student');
+      const error = err instanceof Error ? err : new Error('Failed to add student to MySQL database');
       setError(error);
-      console.error('Error adding student:', error);
+      console.error('Error adding student to MySQL:', error);
       throw error;
     }
   };
@@ -224,9 +90,9 @@ export const useStudents = () => {
       await fetchStudents(); // Refresh list
       return updatedStudent;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error updating student');
+      const error = err instanceof Error ? err : new Error('Failed to update student in MySQL database');
       setError(error);
-      console.error('Error updating student:', error);
+      console.error('Error updating student in MySQL:', error);
       throw error;
     }
   };
@@ -238,9 +104,9 @@ export const useStudents = () => {
       await fetchStudents(); // Refresh list
       return true;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error deleting student');
+      const error = err instanceof Error ? err : new Error('Failed to delete student from MySQL database');
       setError(error);
-      console.error('Error deleting student:', error);
+      console.error('Error deleting student from MySQL:', error);
       throw error;
     }
   };
@@ -274,30 +140,9 @@ export const useAttendanceRecords = () => {
       const data = await db.getAttendanceRecords();
       setRecords(data);
     } catch (err) {
-      console.error('Error fetching attendance records:', err);
-      setError(err instanceof Error ? err : new Error('Unknown error fetching records'));
-      
-      // Fallback to localStorage
-      try {
-        // Avoid "not defined" errors in SSR
-        if (typeof localStorage !== 'undefined') {
-          const storedRecords = localStorage.getItem('attentrack-attendance');
-          if (storedRecords) {
-            setRecords(JSON.parse(storedRecords));
-          } else {
-            const initialRecords = generateInitialAttendanceRecords();
-            setRecords(initialRecords);
-            localStorage.setItem('attentrack-attendance', JSON.stringify(initialRecords));
-          }
-        } else {
-          // If localStorage not available, use empty array
-          setRecords([]);
-        }
-      } catch (localStorageErr) {
-        console.error('LocalStorage fallback also failed:', localStorageErr);
-        // Use empty array as last resort
-        setRecords([]);
-      }
+      console.error('Error fetching attendance records from MySQL:', err);
+      setError(err instanceof Error ? err : new Error('Failed to fetch attendance records from MySQL database'));
+      throw new Error('This application requires a MySQL database to function');
     } finally {
       setLoading(false);
     }
@@ -316,34 +161,10 @@ export const useAttendanceRecords = () => {
       await fetchRecords(); // Refresh records
       return record;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error saving record');
+      const error = err instanceof Error ? err : new Error('Failed to save attendance record to MySQL database');
       setError(error);
-      console.error('Error saving attendance record:', error);
-      
-      // Attempt fallback to localStorage
-      try {
-        if (typeof localStorage !== 'undefined') {
-          const existingRecords = records;
-          const existingIndex = existingRecords.findIndex(r => r.id === record.id);
-          
-          let newRecords: AttendanceRecord[];
-          
-          if (existingIndex >= 0) {
-            newRecords = [...existingRecords];
-            newRecords[existingIndex] = record;
-          } else {
-            newRecords = [record, ...existingRecords];
-          }
-          
-          newRecords.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          setRecords(newRecords);
-          localStorage.setItem('attentrack-attendance', JSON.stringify(newRecords));
-        }
-      } catch (localStorageErr) {
-        console.error('LocalStorage fallback also failed:', localStorageErr);
-      }
-      
-      return record;
+      console.error('Error saving attendance record to MySQL:', error);
+      throw error;
     }
   };
   
@@ -354,9 +175,9 @@ export const useAttendanceRecords = () => {
       await fetchRecords(); // Refresh records
       return true;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Unknown error deleting record');
+      const error = err instanceof Error ? err : new Error('Failed to delete attendance record from MySQL database');
       setError(error);
-      console.error('Error deleting attendance record:', error);
+      console.error('Error deleting attendance record from MySQL:', error);
       throw error;
     }
   };
